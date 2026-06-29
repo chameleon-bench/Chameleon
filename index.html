@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chameleon: A Large-scale Benchmark for SQL Dialect Translation</title>
+    <meta name="description" content="Chameleon is a large-scale benchmark for SQL dialect translation constructed through a divergence-driven end-to-end LLM synthesis framework.">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="#home" class="nav-logo">
+                <img src="logo.png" alt="Chameleon" class="logo-img">
+                <span class="logo-text">Chameleon</span>
+            </a>
+            <ul class="nav-menu">
+                <li><a href="#home" class="nav-link">Home</a></li>
+                <li><a href="#overview" class="nav-link">Overview</a></li>
+                <li><a href="#features" class="nav-link">Features</a></li>
+                <li><a href="#statistics" class="nav-link">Statistics</a></li>
+                <li><a href="#leaderboard" class="nav-link">Leaderboard</a></li>
+                <li><a href="#download" class="nav-link">Download</a></li>
+            </ul>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+        <div class="hero-bg">
+            <div class="hero-blob blob-1"></div>
+            <div class="hero-blob blob-2"></div>
+            <div class="hero-blob blob-3"></div>
+        </div>
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="badge-dot"></span>
+                A Large-scale Benchmark for SQL Dialect Translation
+            </div>
+            <h1 class="hero-title">Chameleon</h1>
+            <p class="hero-subtitle">
+                A divergence-driven, end-to-end LLM-synthesized benchmark for evaluating
+                SQL dialect translation across <strong>MySQL</strong>, <strong>PostgreSQL</strong>, and <strong>Oracle</strong>.
+            </p>
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <span class="stat-number">1,200</span>
+                    <span class="stat-label">Databases</span>
+                </div>
+                <div class="hero-stat-divider"></div>
+                <div class="hero-stat">
+                    <span class="stat-number">100K+</span>
+                    <span class="stat-label">Queries</span>
+                </div>
+                <div class="hero-stat-divider"></div>
+                <div class="hero-stat">
+                    <span class="stat-number">500+</span>
+                    <span class="stat-label">Divergences</span>
+                </div>
+                <div class="hero-stat-divider"></div>
+                <div class="hero-stat">
+                    <span class="stat-number">3</span>
+                    <span class="stat-label">Dialects</span>
+                </div>
+            </div>
+            <div class="hero-actions">
+                <a href="#leaderboard" class="btn btn-primary">View Leaderboard</a>
+                <a href="#overview" class="btn btn-secondary">Learn More</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Overview Section -->
+    <section class="section" id="overview">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">Overview</span>
+                <h2 class="section-title">What is Chameleon?</h2>
+            </div>
+            <div class="overview-intro">
+                <p>
+                    The divergence between SQL dialects across different database systems poses challenges
+                    to aligning their semantic information through query translation, thereby impacting
+                    the reliability of database migration and cross-engine analytics.
+                </p>
+                <p>
+                    Existing benchmarks for this task remain largely inherited from NL2SQL corpora, providing
+                    limited coverage of dialect-specific divergence and lacking both sufficient scale and
+                    ready-to-use cross-engine evaluation setups.
+                </p>
+                <p>
+                    <strong>Chameleon</strong> is a large-scale benchmark for SQL dialect translation constructed
+                    through an end-to-end, divergence-driven synthesis framework. We mine 500+ structured dialect
+                    differences and decompose them into stage-specific requirements. Guided by these requirements,
+                    LLMs orchestrate a synthesis pipeline spanning schema construction, data population, and query
+                    synthesis, enabling the construction of equivalent multi-engine database instances with diverse
+                    executable queries.
+                </p>
+            </div>
+            <div class="framework-pipeline">
+                <div class="pipeline-step">
+                    <div class="pipeline-top">
+                        <span class="pipeline-icon">🔍</span>
+                        <span class="pipeline-number">01</span>
+                    </div>
+                    <h4>Divergence Inventory</h4>
+                    <p>500+ cross-dialect divergences mined from transpilation engines, decomposed into stage-specific requirements.</p>
+                </div>
+                <div class="pipeline-connector"><span>→</span></div>
+                <div class="pipeline-step">
+                    <div class="pipeline-top">
+                        <span class="pipeline-icon">🏗️</span>
+                        <span class="pipeline-number">02</span>
+                    </div>
+                    <h4>Schema Construction</h4>
+                    <p>LLM-powered expand-verify-reflect loop augments seed schemas with dialect-sensitive columns.</p>
+                </div>
+                <div class="pipeline-connector"><span>→</span></div>
+                <div class="pipeline-step">
+                    <div class="pipeline-top">
+                        <span class="pipeline-icon">📊</span>
+                        <span class="pipeline-number">03</span>
+                    </div>
+                    <h4>Data Population</h4>
+                    <p>Business simulator generates realistic data with dialect-sensitive values that expose cross-engine divergences.</p>
+                </div>
+                <div class="pipeline-connector"><span>→</span></div>
+                <div class="pipeline-step">
+                    <div class="pipeline-top">
+                        <span class="pipeline-icon">⚡</span>
+                        <span class="pipeline-number">04</span>
+                    </div>
+                    <h4>Query Synthesis</h4>
+                    <p>Knowledge-guided generation with four difficulty levels, validated through execution with self-repair.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="section section-alt" id="features">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">Key Features</span>
+                <h2 class="section-title">Why Chameleon?</h2>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card" style="--card-accent: #1a7a4c;">
+                    <div class="feature-accent-bar"></div>
+                    <div class="feature-icon-wrap"><span>📊</span></div>
+                    <h3>Scale &amp; Diversity</h3>
+                    <p>1,200 cross-domain databases and over 100K translation queries distributed across four difficulty levels, compared with PARROT's 28K queries and DLBENCH's 6,402 tasks.</p>
+                </div>
+                <div class="feature-card" style="--card-accent: #d4a017;">
+                    <div class="feature-accent-bar"></div>
+                    <div class="feature-icon-wrap"><span>🎯</span></div>
+                    <h3>Divergence-Driven Coverage</h3>
+                    <p>Driven by over 500 structured dialect divergences mined from widely adopted transpilation engines. About 96.0% of valid generated queries exercise at least one dialect-specific feature.</p>
+                </div>
+                <div class="feature-card" style="--card-accent: #2d7cb0;">
+                    <div class="feature-accent-bar"></div>
+                    <div class="feature-icon-wrap"><span>⚡</span></div>
+                    <h3>Compact &amp; Ready-to-Use</h3>
+                    <p>Databases average only 14 rows per table, and every database is materialized with equivalent schemas and identical data across all three engines, enabling direct cross-engine evaluation.</p>
+                </div>
+                <div class="feature-card" style="--card-accent: #8b5cf6;">
+                    <div class="feature-accent-bar"></div>
+                    <div class="feature-icon-wrap"><span>🔀</span></div>
+                    <h3>Standardized Splits</h3>
+                    <p>A standardized 1,000/100/100 train/dev/test split is provided, facilitating reproducible model development and fair comparison among translation systems.</p>
+                </div>
+                <div class="feature-card" style="--card-accent: #ef6c4d;">
+                    <div class="feature-accent-bar"></div>
+                    <div class="feature-icon-wrap"><span>🧠</span></div>
+                    <h3>Translation-Aware Difficulty</h3>
+                    <p>Four difficulty levels (easy, medium, hard, extra) defined by dialect divergence density and structural complexity, not generic query complexity.</p>
+                </div>
+                <div class="feature-card" style="--card-accent: #0ea5a4;">
+                    <div class="feature-accent-bar"></div>
+                    <div class="feature-icon-wrap"><span>✅</span></div>
+                    <h3>Execution-Validated</h3>
+                    <p>Every query is execution-validated on real database engines with an LLM-based self-repair loop, ensuring executability and meaningful result sets.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Statistics Section -->
+    <section class="section" id="statistics">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">Statistics</span>
+                <h2 class="section-title">Benchmark at a Glance</h2>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card highlight">
+                    <div class="stat-card-number">1,200</div>
+                    <div class="stat-card-label">Cross-domain Databases</div>
+                    <div class="stat-card-sub">1,000 train / 100 dev / 100 test</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-number">100K+</div>
+                    <div class="stat-card-label">Execution-Validated Queries</div>
+                    <div class="stat-card-sub">Across MySQL, PostgreSQL, Oracle</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-number">500+</div>
+                    <div class="stat-card-label">Structured Divergences</div>
+                    <div class="stat-card-sub">Mined from transpilation engines</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-number">96.0%</div>
+                    <div class="stat-card-label">Dialect Coverage</div>
+                    <div class="stat-card-sub">Queries exercising ≥1 divergence</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-number">4</div>
+                    <div class="stat-card-label">Difficulty Levels</div>
+                    <div class="stat-card-sub">Easy / Medium / Hard / Extra</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-number">14</div>
+                    <div class="stat-card-label">Avg. Rows per Table</div>
+                    <div class="stat-card-sub">Lightweight, fast deployment</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Leaderboard Section -->
+    <section class="section section-alt" id="leaderboard">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">Leaderboard</span>
+                <h2 class="section-title">Leaderboard</h2>
+                <p class="section-desc">
+                    Translation performance of LLMs on the Chameleon benchmark.
+                    Models are ranked by overall <strong>Exact Match (EM)</strong>. ES denotes Execution Success.
+                </p>
+            </div>
+
+            <!-- Split Toggle -->
+            <div class="leaderboard-controls">
+                <div class="control-group">
+                    <label>Split:</label>
+                    <div class="toggle-group">
+                        <button class="split-btn toggle-btn active" data-split="dev">Dev Split</button>
+                        <button class="split-btn toggle-btn" data-split="test">Test Split</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dev Split View -->
+            <div id="devView">
+                <div class="leaderboard-controls sub-controls">
+                    <div class="control-group">
+                        <label>Metric:</label>
+                        <div class="toggle-group">
+                            <button class="metric-btn toggle-btn active" data-metric="em">Exact Match (EM)</button>
+                            <button class="metric-btn toggle-btn" data-metric="es">Execution Success (ES)</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-container leaderboard-container">
+                    <table class="leaderboard-table">
+                        <thead>
+                            <tr>
+                                <th class="rank-col">Rank</th>
+                                <th class="method-col">Method</th>
+                                <th>Thinking</th>
+                                <th>MySQL → PG</th>
+                                <th>PG → MySQL</th>
+                                <th>MySQL → Oracle</th>
+                                <th>Oracle → MySQL</th>
+                                <th>PG → Oracle</th>
+                                <th>Oracle → PG</th>
+                                <th class="overall-col">Overall</th>
+                            </tr>
+                        </thead>
+                        <tbody id="devLeaderboardBody"></tbody>
+                    </table>
+                </div>
+                <div class="leaderboard-note">
+                    <p>
+                        <strong>Dev Split:</strong> Results with execution-guided reflection (up to 2 rounds) on 100 dev databases (3,851 queries).
+                    </p>
+                </div>
+            </div>
+
+            <!-- Test Split View -->
+            <div id="testView" style="display: none;">
+                <div class="table-container leaderboard-container">
+                    <table class="leaderboard-table test-table">
+                        <thead>
+                            <tr>
+                                <th class="rank-col" rowspan="2">Rank</th>
+                                <th class="method-col" rowspan="2">Method</th>
+                                <th rowspan="2">Thinking</th>
+                                <th colspan="2" class="group-header">No Reflection</th>
+                                <th colspan="2" class="group-header group-highlight">With Reflection</th>
+                            </tr>
+                            <tr>
+                                <th>ES</th>
+                                <th>EM</th>
+                                <th>ES</th>
+                                <th class="overall-col">EM</th>
+                            </tr>
+                        </thead>
+                        <tbody id="testLeaderboardBody"></tbody>
+                    </table>
+                </div>
+                <div class="leaderboard-note">
+                    <p>
+                        <strong>Test Split:</strong> Results on 100 test databases (4,000+ queries). Test split statistics are withheld to prevent contamination.
+                        To submit your model results, please refer to the submission instructions in the GitHub repository.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Download Section -->
+    <section class="section" id="download">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">Get Started</span>
+                <h2 class="section-title">Download &amp; Usage</h2>
+            </div>
+            <div class="download-grid">
+                <div class="download-card">
+                    <div class="download-icon">📦</div>
+                    <h3>Dataset</h3>
+                    <p>The full Chameleon benchmark including 1,200 databases (schemas + data) and 100K+ queries across MySQL, PostgreSQL, and Oracle.</p>
+                    <a href="#" class="btn btn-outline" onclick="alert('Repository link will be available upon paper acceptance.'); return false;">Access Dataset</a>
+                </div>
+                <div class="download-card">
+                    <div class="download-icon">🔧</div>
+                    <h3>Evaluation Toolkit</h3>
+                    <p>Scripts and tools for deploying cross-engine databases, running translation systems, and computing ES / EM metrics with result canonicalization.</p>
+                    <a href="#" class="btn btn-outline" onclick="alert('Repository link will be available upon paper acceptance.'); return false;">Get Toolkit</a>
+                </div>
+                <div class="download-card">
+                    <div class="download-icon">📖</div>
+                    <h3>Documentation</h3>
+                    <p>Detailed documentation on benchmark construction, divergence inventory, evaluation protocol, and how to submit results to the leaderboard.</p>
+                    <a href="#" class="btn btn-outline" onclick="alert('Documentation will be available upon paper acceptance.'); return false;">Read Docs</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <img src="logo.png" alt="Chameleon" class="logo-img footer-logo-img">
+                    <span class="logo-text">Chameleon</span>
+                </div>
+                <p class="footer-desc">
+                    A large-scale benchmark for SQL dialect translation via divergence-driven end-to-end LLM synthesis.
+                </p>
+                <div class="footer-links">
+                    <a href="#home">Home</a>
+                    <a href="#overview">Overview</a>
+                    <a href="#leaderboard">Leaderboard</a>
+                    <a href="#download">Download</a>
+                </div>
+                <p class="footer-copy">
+                    © 2026 Chameleon Benchmark. Anonymous submission. All rights reserved.
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
