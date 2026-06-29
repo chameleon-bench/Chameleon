@@ -88,59 +88,32 @@
             </div>
             <div class="overview-intro">
                 <p>
-                    The divergence between SQL dialects across different database systems poses challenges
-                    to aligning their semantic information through query translation, thereby impacting
-                    the reliability of database migration and cross-engine analytics.
-                </p>
-                <p>
-                    Existing benchmarks for this task remain largely inherited from NL2SQL corpora, providing
-                    limited coverage of dialect-specific divergence and lacking both sufficient scale and
-                    ready-to-use cross-engine evaluation setups.
-                </p>
-                <p>
-                    <strong>Chameleon</strong> is a large-scale benchmark for SQL dialect translation constructed
-                    through an end-to-end, divergence-driven synthesis framework. We mine 500+ structured dialect
-                    differences and decompose them into stage-specific requirements. Guided by these requirements,
-                    LLMs orchestrate a synthesis pipeline spanning schema construction, data population, and query
-                    synthesis, enabling the construction of equivalent multi-engine database instances with diverse
-                    executable queries.
+                    <strong>Chameleon</strong> is a large-scale benchmark for SQL dialect translation across MySQL, PostgreSQL, and Oracle, constructed through a divergence-driven end-to-end LLM synthesis framework. It features 1,200 cross-domain databases with cross-engine equivalent schemas and data, over 100K execution-validated queries across four difficulty levels, and a standardized train/dev/test split for reproducible evaluation.
                 </p>
             </div>
             <div class="framework-pipeline">
                 <div class="pipeline-step">
-                    <div class="pipeline-top">
-                        <span class="pipeline-icon">🔍</span>
-                        <span class="pipeline-number">01</span>
-                    </div>
+                    <div class="pipeline-number">01</div>
                     <h4>Divergence Inventory</h4>
-                    <p>500+ cross-dialect divergences mined from transpilation engines, decomposed into stage-specific requirements.</p>
+                    <p>500+ cross-dialect divergences mined from transpilation engines.</p>
                 </div>
                 <div class="pipeline-connector"><span>→</span></div>
                 <div class="pipeline-step">
-                    <div class="pipeline-top">
-                        <span class="pipeline-icon">🏗️</span>
-                        <span class="pipeline-number">02</span>
-                    </div>
+                    <div class="pipeline-number">02</div>
                     <h4>Schema Construction</h4>
-                    <p>LLM-powered expand-verify-reflect loop augments seed schemas with dialect-sensitive columns.</p>
+                    <p>Expand-verify-reflect loop augments schemas with dialect-sensitive columns.</p>
                 </div>
                 <div class="pipeline-connector"><span>→</span></div>
                 <div class="pipeline-step">
-                    <div class="pipeline-top">
-                        <span class="pipeline-icon">📊</span>
-                        <span class="pipeline-number">03</span>
-                    </div>
+                    <div class="pipeline-number">03</div>
                     <h4>Data Population</h4>
-                    <p>Business simulator generates realistic data with dialect-sensitive values that expose cross-engine divergences.</p>
+                    <p>Business simulator generates realistic data with dialect-sensitive values.</p>
                 </div>
                 <div class="pipeline-connector"><span>→</span></div>
                 <div class="pipeline-step">
-                    <div class="pipeline-top">
-                        <span class="pipeline-icon">⚡</span>
-                        <span class="pipeline-number">04</span>
-                    </div>
+                    <div class="pipeline-number">04</div>
                     <h4>Query Synthesis</h4>
-                    <p>Knowledge-guided generation with four difficulty levels, validated through execution with self-repair.</p>
+                    <p>Knowledge-guided generation with four difficulty levels, execution-validated.</p>
                 </div>
             </div>
         </div>
@@ -156,39 +129,33 @@
             <div class="features-grid">
                 <div class="feature-card" style="--card-accent: #1a7a4c;">
                     <div class="feature-accent-bar"></div>
-                    <div class="feature-icon-wrap"><span>📊</span></div>
                     <h3>Scale &amp; Diversity</h3>
-                    <p>1,200 cross-domain databases and over 100K translation queries distributed across four difficulty levels, compared with PARROT's 28K queries and DLBENCH's 6,402 tasks.</p>
+                    <p>1,200 cross-domain databases and over 100K translation queries across four difficulty levels.</p>
                 </div>
                 <div class="feature-card" style="--card-accent: #d4a017;">
                     <div class="feature-accent-bar"></div>
-                    <div class="feature-icon-wrap"><span>🎯</span></div>
                     <h3>Divergence-Driven Coverage</h3>
-                    <p>Driven by over 500 structured dialect divergences mined from widely adopted transpilation engines. About 96.0% of valid generated queries exercise at least one dialect-specific feature.</p>
+                    <p>500+ structured dialect divergences. 96.0% of queries exercise at least one dialect-specific feature.</p>
                 </div>
                 <div class="feature-card" style="--card-accent: #2d7cb0;">
                     <div class="feature-accent-bar"></div>
-                    <div class="feature-icon-wrap"><span>⚡</span></div>
                     <h3>Compact &amp; Ready-to-Use</h3>
-                    <p>Databases average only 14 rows per table, and every database is materialized with equivalent schemas and identical data across all three engines, enabling direct cross-engine evaluation.</p>
+                    <p>14 rows per table on average. Equivalent schemas and data across all three engines.</p>
                 </div>
                 <div class="feature-card" style="--card-accent: #8b5cf6;">
                     <div class="feature-accent-bar"></div>
-                    <div class="feature-icon-wrap"><span>🔀</span></div>
                     <h3>Standardized Splits</h3>
-                    <p>A standardized 1,000/100/100 train/dev/test split is provided, facilitating reproducible model development and fair comparison among translation systems.</p>
+                    <p>1,000/100/100 train/dev/test split for reproducible model development and fair comparison.</p>
                 </div>
                 <div class="feature-card" style="--card-accent: #ef6c4d;">
                     <div class="feature-accent-bar"></div>
-                    <div class="feature-icon-wrap"><span>🧠</span></div>
                     <h3>Translation-Aware Difficulty</h3>
-                    <p>Four difficulty levels (easy, medium, hard, extra) defined by dialect divergence density and structural complexity, not generic query complexity.</p>
+                    <p>Four difficulty levels defined by dialect divergence density and structural complexity.</p>
                 </div>
                 <div class="feature-card" style="--card-accent: #0ea5a4;">
                     <div class="feature-accent-bar"></div>
-                    <div class="feature-icon-wrap"><span>✅</span></div>
                     <h3>Execution-Validated</h3>
-                    <p>Every query is execution-validated on real database engines with an LLM-based self-repair loop, ensuring executability and meaningful result sets.</p>
+                    <p>Every query execution-validated on real engines with LLM-based self-repair.</p>
                 </div>
             </div>
         </div>
