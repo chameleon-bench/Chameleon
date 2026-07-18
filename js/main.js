@@ -152,26 +152,32 @@ const testData = [
     {
         method: "DeepSeek-V4-Pro",
         thinking: true,
-        noReflection: { es: 0.602, em: 0.594 },
+        noReflection: { es: 0.835, em: 0.594 },
         withReflection: { es: 0.929, em: 0.821 }
     },
     {
         method: "DeepSeek-V4-Flash",
         thinking: true,
-        noReflection: { es: 0.579, em: 0.570 },
+        noReflection: { es: 0.812, em: 0.570 },
         withReflection: { es: 0.925, em: 0.798 }
     },
     {
         method: "MiMo-V2.5",
         thinking: true,
-        noReflection: { es: 0.540, em: 0.530 },
+        noReflection: { es: 0.757, em: 0.530 },
         withReflection: { es: 0.873, em: 0.735 }
     },
     {
         method: "Qwen3.6-Flash",
         thinking: true,
-        noReflection: { es: 0.513, em: 0.506 },
+        noReflection: { es: 0.739, em: 0.506 },
         withReflection: { es: 0.878, em: 0.723 }
+    },
+    {
+        method: "GPT-5-Nano",
+        thinking: true,
+        noReflection: { es: 0.679, em: 0.475 },
+        withReflection: { es: 0.844, em: 0.694 }
     }
 ];
 
