@@ -2,6 +2,19 @@
 // Source: paper Table 5 (dev split, with reflection)
 const devData = [
     {
+        method: "Qwen3.7-Max",
+        thinking: true,
+        directions: {
+            "mysql_pg":     { es: 0.985, em: 0.914 },
+            "pg_mysql":     { es: 0.996, em: 0.918 },
+            "mysql_oracle": { es: 0.903, em: 0.826 },
+            "oracle_mysql": { es: 0.977, em: 0.896 },
+            "pg_oracle":    { es: 0.891, em: 0.842 },
+            "oracle_pg":    { es: 0.974, em: 0.898 }
+        },
+        overall: { es: 0.952, em: 0.881 }
+    },
+    {
         method: "DeepSeek-V4-Pro",
         thinking: true,
         directions: {
