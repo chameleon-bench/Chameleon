@@ -156,6 +156,20 @@ a:hover {
     background: rgba(26, 122, 76, 0.1);
 }
 
+.nav-github {
+    display: flex;
+    align-items: center;
+    color: var(--color-text-light);
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+}
+
+.nav-github:hover {
+    color: var(--color-primary);
+    background: rgba(26, 122, 76, 0.06);
+}
+
 .nav-toggle {
     display: none;
     flex-direction: column;
