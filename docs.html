@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentation - Chameleon</title>
+    <meta name="description" content="Documentation for the Chameleon benchmark: dataset structure, file formats, difficulty levels, database setup, and evaluation protocol.">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">
+                <img src="logo.png" alt="Chameleon" class="logo-img">
+                <span class="logo-text">Chameleon</span>
+            </a>
+            <ul class="nav-menu">
+                <li><a href="index.html#home" class="nav-link">Home</a></li>
+                <li><a href="index.html#overview" class="nav-link">Overview</a></li>
+                <li><a href="index.html#statistics" class="nav-link">Statistics</a></li>
+                <li><a href="index.html#leaderboard" class="nav-link">Leaderboard</a></li>
+                <li><a href="index.html#preview" class="nav-link">Preview</a></li>
+                <li><a href="docs.html" class="nav-link active">Documentation</a></li>
+                <li><a href="index.html#download" class="nav-link">Download</a></li>
+            </ul>
+            <a href="https://github.com/chameleon-bench/Chameleon-Source" target="_blank" rel="noopener" class="nav-github" aria-label="View on GitHub">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.37.5 0 5.78 0 12.29c0 5.21 3.44 9.63 8.21 11.19.6.11.82-.25.82-.56 0-.28-.01-1.02-.02-2-3.34.71-4.04-1.58-4.04-1.58-.55-1.36-1.34-1.73-1.34-1.73-1.09-.73.08-.72.08-.72 1.2.08 1.84 1.21 1.84 1.21 1.07 1.79 2.81 1.27 3.5.97.11-.76.42-1.27.76-1.56-2.67-.3-5.47-1.31-5.47-5.81 0-1.28.47-2.33 1.23-3.15-.12-.3-.53-1.52.12-3.16 0 0 1-.32 3.3 1.2.96-.26 1.98-.39 3-.4 1.02.01 2.04.14 3 .4 2.28-1.52 3.29-1.2 3.29-1.2.65 1.64.24 2.86.12 3.16.77.82 1.23 1.87 1.23 3.15 0 4.51-2.81 5.5-5.49 5.79.43.36.81 1.09.81 2.22 0 1.6-.01 2.89-.01 3.28 0 .31.22.68.83.56C20.57 21.91 24 17.5 24 12.29 24 5.78 18.63.5 12 .5z"/></svg>
+            </a>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <header class="docs-hero">
+        <div class="container">
+            <span class="section-tag">Documentation</span>
+            <h1 class="docs-title">Chameleon User Guide</h1>
+            <p class="docs-lead">
+                Everything needed to load the benchmark into three engines and reproduce the reported
+                ES and EM scores: dataset layout, file formats, difficulty definitions, and the evaluation protocol.
+            </p>
+        </div>
+    </header>
+
+    <div class="docs-layout container">
+        <aside class="docs-nav">
+            <p class="docs-nav-title">Contents</p>
+            <ul>
+                <li><a href="#overview">1. Overview</a></li>
+                <li><a href="#structure">2. Dataset Structure</a></li>
+                <li><a href="#formats">3. File Formats</a></li>
+                <li><a href="#construction">4. Benchmark Construction</a></li>
+                <li><a href="#synthesis">5. Running the Synthesis</a></li>
+                <li><a href="#difficulty">6. Difficulty Levels</a></li>
+                <li><a href="#setup">7. Database Setup</a></li>
+                <li><a href="#protocol">8. Evaluation Protocol</a></li>
+                <li><a href="#running">9. Running the Evaluation</a></li>
+                <li><a href="#citation">10. Citation</a></li>
+            </ul>
+        </aside>
+
+        <main class="docs-body">
+
+            <section id="overview">
+                <h2>1. Overview</h2>
+                <p>
+                    Chameleon is a benchmark for SQL dialect translation across <strong>MySQL</strong>,
+                    <strong>PostgreSQL</strong>, and <strong>Oracle</strong>. It contains 1,200 cross-domain
+                    databases and more than 100K execution-validated queries, partitioned into a
+                    standardized 1,000 / 100 / 100 train / dev / test split.
+                </p>
+                <p>
+                    Every database is materialized three times, once per engine, with logically equivalent
+                    schemas and identical data. A query is written in one source dialect; translation
+                    systems must render it in a target dialect so that both queries return the same result
+                    set on their respective engines.
+                </p>
+                <table class="doc-table">
+                    <thead>
+                        <tr><th>Property</th><th>Value</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Databases</td><td>1,200 (1,000 train / 100 dev / 100 test)</td></tr>
+                        <tr><td>Queries</td><td>100K+, execution-validated</td></tr>
+                        <tr><td>Dialects</td><td>MySQL, PostgreSQL, Oracle</td></tr>
+                        <tr><td>Translation directions</td><td>6 (all ordered pairs)</td></tr>
+                        <tr><td>Difficulty levels</td><td>easy, medium, hard, extra</td></tr>
+                        <tr><td>Metrics</td><td>Execution Success (ES), Execution Match (EM)</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="structure">
+                <h2>2. Dataset Structure</h2>
+                <p>
+                    The archive unpacks into one directory per split, then one directory per database.
+                    Each database carries three dialect-specific copies of its schema and data, plus a
+                    single query file written in one source dialect.
+                </p>
+<pre><code>dataset/
+├── train/                          # 1,000 databases
+├── dev/                            # 100 databases
+└── &lt;db_name&gt;/
+    ├── schema/
+    │   ├── &lt;db_name&gt;_schema_mysql.sql
+    │   ├── &lt;db_name&gt;_schema_pg.sql
+    │   └── &lt;db_name&gt;_schema_oracle.sql
+    ├── data/
+    │   ├── &lt;db_name&gt;_data_mysql.sql
+    │   ├── &lt;db_name&gt;_data_pg.sql
+    │   └── &lt;db_name&gt;_data_oracle.sql
+    └── query/
+        └── &lt;db_name&gt;_&lt;dialect&gt;_queries.json</code></pre>
+                <p>
+                    The dialect suffix in the query file name identifies the <em>source</em> dialect of that
+                    database. A database is assigned a single source dialect during synthesis, so all its
+                    queries share the same origin. To translate into other engines, the source dialect is
+                    the one named in the file, and the remaining two are valid targets.
+                </p>
+            </section>
+
+            <section id="formats">
+                <h2>3. File Formats</h2>
+
+                <h3>3.1 Schema files</h3>
+                <p>
+                    Plain DDL statements. Each file creates every table of one database in one engine.
+                    Column names, types, primary keys, and foreign keys are rendered in the native syntax
+                    of that engine, and the three files describe the same logical schema.
+                </p>
+<pre><code>CREATE TABLE `research_questions` (
+  `question_id` INT NOT NULL COMMENT 'Unique identifier for each research question',
+  `submitter_id` INT NOT NULL COMMENT 'ID of the submitter',
+  `question_text` VARCHAR(255) NOT NULL,
+  `submission_date` DATETIME NOT NULL,
+  PRIMARY KEY (`question_id`),
+  CONSTRAINT `fk_research_questions_submitter_id`
+    FOREIGN KEY (`submitter_id`) REFERENCES `submitters` (`submitter_id`)
+);</code></pre>
+                <p>
+                    Primary keys are declared explicitly in every table, and primary-key values are always
+                    supplied by the data scripts rather than generated by the engine. As a result, the three
+                    engines hold identical key values and rows can be matched across engines by primary key.
+                </p>
+
+                <h3>3.2 Data files</h3>
+                <p>
+                    One <code>INSERT</code> script per engine. The scripts disable foreign-key checks while
+                    loading, insert rows in a dependency-safe order, and restore the constraints afterwards.
+                </p>
+<pre><code>-- MySQL INSERT script: &lt;db_name&gt;
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
+
+INSERT INTO `submitters` (`submitter_id`, `submitter_name`, `email`) VALUES
+  (1, 'Alice', 'alice@example.com'),
+  (2, 'Bob', 'bob@example.com');
+...</code></pre>
+
+                <h3>3.3 Query files</h3>
+                <p>
+                    A JSON array. Every element is one source query with its metadata.
+                </p>
+<pre><code>[
+  {
+    "query_id": 1,
+    "difficulty": "easy",
+    "sql": "SELECT question_id, question_text FROM research_questions WHERE is_approved = 1",
+    "database": "academic_research_and_evaluation",
+    "dialect": "oracle"
+  }
+]</code></pre>
+                <table class="doc-table">
+                    <thead>
+                        <tr><th>Field</th><th>Meaning</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>query_id</code></td><td>Identifier, unique within the database</td></tr>
+                        <tr><td><code>difficulty</code></td><td>One of <code>easy</code>, <code>medium</code>, <code>hard</code>, <code>extra</code></td></tr>
+                        <tr><td><code>sql</code></td><td>Source query, executable on the source engine and returning a non-empty result</td></tr>
+                        <tr><td><code>database</code></td><td>Database name, matching the directory</td></tr>
+                        <tr><td><code>dialect</code></td><td>Source dialect: <code>mysql</code>, <code>pg</code>, or <code>oracle</code></td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="construction">
+                <h2>4. Benchmark Construction</h2>
+                <p>
+                    Chameleon is synthesized from scratch rather than adapted from existing Text-to-SQL corpora.
+                    The construction is driven by dialect divergences: every divergence mined from transpilation
+                    engines is decomposed into concrete requirements on schemas, data values, and query
+                    patterns, so that it becomes something a database can actually exhibit and a translator can
+                    actually get wrong.
+                </p>
+
+                <figure class="doc-figure">
+                    <svg viewBox="0 0 900 235" role="img" aria-label="Three-stage construction pipeline: divergence inventory, schema construction, data population, query synthesis">
+                        <defs>
+                            <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto">
+                                <path d="M0,0 L7,3.5 L0,7 z" fill="#1a7a4c"/>
+                            </marker>
+                        </defs>
+
+                        <rect x="18" y="28" width="192" height="118" rx="10" fill="#eef5f0" stroke="#1a7a4c" stroke-width="1.4"/>
+                        <text x="114" y="54" text-anchor="middle" font-family="Arial, sans-serif" font-size="12.5" font-weight="700" fill="#0f5235">Divergence Inventory</text>
+                        <text x="114" y="78" text-anchor="middle" font-family="Arial, sans-serif" font-size="10.5" fill="#5a6b62">500+ divergences mined</text>
+                        <text x="114" y="96" text-anchor="middle" font-family="Arial, sans-serif" font-size="10.5" fill="#5a6b62">from transpilation engines</text>
+                        <text x="114" y="120" text-anchor="middle" font-family="Arial, sans-serif" font-size="10.5" font-style="italic" fill="#1a7a4c">&#8594; stage requirements</text>
+
+                        <rect x="240" y="28" width="192" height="118" rx="10" fill="#eef5f0" stroke="#1a7a4c" stroke-width="1.4"/>
+                        <text x="336" y="54" text-anchor="middle" font-family="Arial, sans-serif" font-size="12.5" font-weight="700" fill="#0f5235">Schema Construction</text>
+                        <text x="336" y="78" text-anchor="middle" font-family="Arial, sans-serif" font-size="10.5" fill="#5a6b62">Add dialect-sensitive columns</text>
+                        <text x="336" y="96" text-anchor="middle" font-family="Arial, sans-serif" font-size="10.5" fill="#5a6b62">Rewrite to per-engine DDL</text>
+                        <text x="336" y="120" text-anchor="middle" font-family="Arial, sans-serif" font-size="10.5" font-style="italic" fill="#1a7a4c">&#8594; equivalent schemas</text>
+
+                        <rect x="462" y="28" width="192" height="118" rx="10" fill="#eef5f0" stroke="#1a7a4c" stroke-width="1.4"/>
+                        <text x="558" y="54" text-anchor="middle" font-family="Arial, sans-serif" font-size="12.5" font-weight="700" fill="#0f5235">Data Population</text>
+                        <text x="558" y="78" text-anchor="middle" font-family="Arial, sans-serif" font-size="10.5" fill="#5a6b62">Simulate business scenarios</text>
+                        <text x="558" y="96" text-anchor="middle" font-family="Arial, sans-serif" font-size="10.5" fill="#5a6b62">Inject triggering values</text>
+                        <text x="558" y="120" text-anchor="middle" font-family="Arial, sans-serif" font-size="10.5" font-style="italic" fill="#1a7a4c">&#8594; identical rows</text>
+
+                        <rect x="684" y="28" width="192" height="118" rx="10" fill="#eef5f0" stroke="#1a7a4c" stroke-width="1.4"/>
+                        <text x="780" y="54" text-anchor="middle" font-family="Arial, sans-serif" font-size="12.5" font-weight="700" fill="#0f5235">Query Synthesis</text>
+                        <text x="780" y="78" text-anchor="middle" font-family="Arial, sans-serif" font-size="10.5" fill="#5a6b62">Divergence-guided generation</text>
+                        <text x="780" y="96" text-anchor="middle" font-family="Arial, sans-serif" font-size="10.5" fill="#5a6b62">Difficulty stratification</text>
+                        <text x="780" y="120" text-anchor="middle" font-family="Arial, sans-serif" font-size="10.5" font-style="italic" fill="#1a7a4c">&#8594; validated queries</text>
+
+                        <line x1="212" y1="87" x2="236" y2="87" stroke="#1a7a4c" stroke-width="1.4" marker-end="url(#arrow)"/>
+                        <line x1="434" y1="87" x2="458" y2="87" stroke="#1a7a4c" stroke-width="1.4" marker-end="url(#arrow)"/>
+                        <line x1="656" y1="87" x2="680" y2="87" stroke="#1a7a4c" stroke-width="1.4" marker-end="url(#arrow)"/>
+
+                        <rect x="18" y="168" width="858" height="44" rx="8" fill="#f7faf8" stroke="#c8d4ce" stroke-width="1" stroke-dasharray="4 3"/>
+                        <text x="447" y="196" text-anchor="middle" font-family="Arial, sans-serif" font-size="11.5" fill="#5a6b62">Execution validation with self-repair runs after query synthesis; row-level equivalence is verified across all three engines</text>
+                    </svg>
+                    <figcaption>Figure 1. Divergence-driven construction. Each mined divergence is turned into requirements that the three stages consume in turn.</figcaption>
+                </figure>
+
+                <h3>4.1 Divergence inventory</h3>
+                <p>
+                    Divergences are extracted from the behaviour of widely used transpilation engines, then
+                    grouped into eight categories: keyword, function and identifier, syntax and structure, data
+                    type, numeric precision, date and time, NULL handling, and runtime semantics. Each divergence
+                    record carries the stage requirements it imposes, which is what lets the three later stages
+                    act on it rather than merely cite it.
+                </p>
+
+                <h3>4.2 Schema construction</h3>
+                <p>
+                    A seed schema is expanded with columns whose types and constraints make the assigned
+                    divergences expressible, for example a JSON column when the divergence concerns key
+                    deletion, or a date column when it concerns format specifiers. The expanded schema is then
+                    rewritten into each engine's DDL so that the three versions describe the same logical
+                    tables, columns, keys, and constraints.
+                </p>
+
+                <h3>4.3 Data population</h3>
+                <p>
+                    Rows are produced by simulating business operations over the schema rather than by sampling
+                    random values. The simulator also injects values that trigger the assigned divergences,
+                    because a divergence such as NULL comparison or empty-string handling only becomes visible
+                    when the data contains the right kind of value. Every insert supplies primary-key values
+                    explicitly, so all three engines end up holding the same rows under the same identifiers.
+                </p>
+
+                <h3>4.4 Query synthesis</h3>
+                <p>
+                    Queries are generated under four inputs: the full DDL, the divergence requirements assigned
+                    to that database, a dialect knowledge base sampled per call, and column-level value
+                    statistics so that filter predicates fall inside realistic ranges. Each batch targets one
+                    difficulty level, and every generated query is executed on the source engine. Queries that
+                    fail are repaired through an execution-guided reflection loop, queries that succeed but
+                    return no rows are discarded, and only queries that execute and return a non-empty result
+                    are released.
+                </p>
+            </section>
+
+            <section id="synthesis">
+                <h2>5. Running the Synthesis</h2>
+                <p>
+                    The three construction stages are exposed as command-line entry points in
+                    <a href="https://github.com/chameleon-bench/Chameleon-Source" target="_blank" rel="noopener">Chameleon-Source</a>.
+                    They are only needed if you want to regenerate the benchmark; to use the released data,
+                    skip to Section 7.
+                </p>
+
+                <h3>5.1 Prerequisites</h3>
+                <ul class="doc-list">
+                    <li><code>config/database_sync.yaml</code>: connection settings for the MySQL, PostgreSQL, and Oracle instances</li>
+                    <li><code>config/llm_config.yaml</code>: provider, model, and API key used by all LLM calls</li>
+                    <li><code>config/schema_synthesis.yaml</code>, <code>config/data_synthesis.yaml</code>, <code>config/query_synthesis.yaml</code>: per-stage behaviour, including difficulty weights and per-call batch size</li>
+                </ul>
+                <p>
+                    Stages must run in order. Schema expansion writes the database directories and the divergence
+                    allocation file that the later stages read.
+                </p>
+
+                <h3>5.2 Stage 1: schema construction</h3>
+<pre><code>python -m schema_synthesis.schema_expander \
+    --split dev \
+    --databases my_database_1 my_database_2 \
+    --allocate-first</code></pre>
+                <table class="doc-table">
+                    <thead>
+                        <tr><th>Option</th><th>Meaning</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>--split</code></td><td><code>train</code>, <code>dev</code>, or <code>test</code></td></tr>
+                        <tr><td><code>--databases</code></td><td>Process only the listed databases; omit to process the whole split</td></tr>
+                        <tr><td><code>--limit</code></td><td>Process only the first N databases, useful for a trial run</td></tr>
+                        <tr><td><code>--allocate-first</code></td><td>Run divergence allocation before expansion</td></tr>
+                        <tr><td><code>--no-skip</code></td><td>Reprocess databases that were already handled</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>5.3 Stage 2: data population</h3>
+<pre><code>python -m data_synthesis.synthesizer \
+    --split dev \
+    --db my_database_1 \
+    --seed 42</code></pre>
+                <table class="doc-table">
+                    <thead>
+                        <tr><th>Option</th><th>Meaning</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>--split</code></td><td>Split to populate</td></tr>
+                        <tr><td><code>--db</code></td><td>Comma-separated database names; omit to process the whole split</td></tr>
+                        <tr><td><code>--seed</code></td><td>Random seed, default 42, so a rerun reproduces the same rows</td></tr>
+                        <tr><td><code>--concurrent</code></td><td>Number of databases processed in parallel</td></tr>
+                        <tr><td><code>--allocation</code></td><td>Divergence allocation file; defaults to the one written by stage 1</td></tr>
+                        <tr><td><code>--llm-provider</code>, <code>--llm-model</code></td><td>Override the model used for row generation</td></tr>
+                        <tr><td><code>--clean</code></td><td>Remove existing insert scripts before regenerating</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>5.4 Stage 3: query synthesis</h3>
+<pre><code>python -m query_synthesis.run \
+    --dialect postgresql \
+    --split dev \
+    --databases my_database_1 \
+    --loops-per-difficulty 1 \
+    --queries-per-call 5</code></pre>
+                <table class="doc-table">
+                    <thead>
+                        <tr><th>Option</th><th>Meaning</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>--dialect</code></td><td>Source dialect of the generated queries: <code>mysql</code>, <code>postgresql</code>, or <code>oracle</code></td></tr>
+                        <tr><td><code>--split</code></td><td>Split to synthesize for</td></tr>
+                        <tr><td><code>--databases</code></td><td>Space-separated database names; omit to process the whole split</td></tr>
+                        <tr><td><code>--config</code></td><td>Config file, defaults to <code>config/query_synthesis.yaml</code></td></tr>
+                        <tr><td><code>--loops-per-difficulty</code></td><td>Base number of batches per difficulty level</td></tr>
+                        <tr><td><code>--queries-per-call</code></td><td>Queries requested per LLM call</td></tr>
+                    </tbody>
+                </table>
+                <p>
+                    Difficulty proportions are controlled by weights in the stage config rather than by the command
+                    line, so <code>loops-per-difficulty</code> changes the total volume while the weight vector
+                    keeps the easy / medium / hard / extra ratio stable.
+                </p>
+
+                <h3>5.5 Changing the language model</h3>
+                <p>
+                    Each stage reads its model from its own config file, so the three stages can use different
+                    models. The field names differ slightly between stages because each config was written
+                    independently.
+                </p>
+                <table class="doc-table">
+                    <thead>
+                        <tr><th>Stage</th><th>Config file</th><th>Fields</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Schema</td>
+                            <td><code>config/schema_synthesis.yaml</code></td>
+                            <td><code>expansion.provider</code>, <code>expansion.model</code></td>
+                        </tr>
+                        <tr>
+                            <td>Data</td>
+                            <td><code>config/data_synthesis.yaml</code></td>
+                            <td><code>llm.provider</code>, <code>llm.model</code>, <code>llm_data_gen.temperature</code></td>
+                        </tr>
+                        <tr>
+                            <td>Query</td>
+                            <td><code>config/query_synthesis.yaml</code></td>
+                            <td><code>llm.provider</code>, <code>llm.model</code>, <code>llm.temperature</code>, <code>llm.max_tokens</code></td>
+                        </tr>
+                        <tr>
+                            <td>Evaluation</td>
+                            <td>not applicable</td>
+                            <td>the evaluator executes SQL and never calls a model</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p>
+                    A provider and model must first exist in <code>config/llm_config.yaml</code>. To add one,
+                    append a provider block and list its models:
+                </p>
+<pre><code>providers:
+  my_provider:
+    name: "My Provider"
+    api_key: "YOUR_API_KEY"
+    base_url: "https://api.example.com/v1"
+    max_n: 4
+    models:
+      my-model:
+        name: "my-model"
+        short_name: "mymodel"
+        max_tokens: 32768
+        temperature: 0.7
+        context_window: 131072
+        thinking:
+          enabled: false</code></pre>
+                <p>
+                    The key under <code>models</code> is the value you then write into <code>llm.model</code>.
+                    The <code>thinking</code> block controls reasoning mode for models that expose it; when a
+                    model reasons by default, disabling it is usually necessary for long query batches, because
+                    the reasoning tokens can consume the entire output budget before any SQL is emitted.
+                </p>
+
+                <h3>5.6 Controlling difficulty and volume</h3>
+                <p>
+                    Four weights in <code>config/query_synthesis.yaml</code> set the target mix:
+                </p>
+<pre><code>difficulty_weights:
+  easy: 0.1
+  medium: 0.3
+  hard: 0.4
+  extra: 0.2</code></pre>
+                <p>
+                    The weights are relative, not absolute: they are normalized, so <code>1 / 3 / 4 / 2</code>
+                    and <code>0.1 / 0.3 / 0.4 / 0.2</code> produce the same distribution. The number of batches
+                    per level is proportional to its weight, with the smallest weight yielding exactly
+                    <code>loops_per_difficulty</code> batches. With the default weights and
+                    <code>loops_per_difficulty: 1</code>, one run therefore performs 1 easy, 3 medium, 4 hard,
+                    and 2 extra batches; setting it to 2 doubles all four counts.
+                </p>
+                <p>
+                    Volume per batch is set by <code>queries_per_call</code>. The expected number of queries is
+                    roughly the number of batches multiplied by this value, minus queries lost to execution
+                    failures and empty results. Two settings interact here: a large
+                    <code>queries_per_call</code> reduces the number of calls but makes each response longer,
+                    which raises the risk of hitting the output token limit, especially on the extra level where
+                    queries are longest.
+                </p>
+                <p>
+                    Difficulty composition is also affected by filtering after generation. Every query is
+                    executed on the source engine; queries that error are repaired through reflection, and
+                    queries that succeed but return no rows are dropped. Since these losses are not uniform
+                    across levels, the realized distribution can drift slightly from the configured weights.
+                </p>
+
+                <h3>5.7 Reproducibility and cost knobs</h3>
+                <table class="doc-table">
+                    <thead>
+                        <tr><th>Setting</th><th>Config</th><th>Effect</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>seed</code></td>
+                            <td><code>data_synthesis.yaml</code>, <code>query_synthesis.yaml</code></td>
+                            <td>Fixes sampling so a rerun reproduces the same rows and query set</td>
+                        </tr>
+                        <tr>
+                            <td><code>sample_rows</code></td>
+                            <td><code>query_synthesis.yaml</code></td>
+                            <td>Rows shown to the model per table; leaving it empty costs the model its data context</td>
+                        </tr>
+                        <tr>
+                            <td><code>reflection.enabled</code>, <code>max_retries</code></td>
+                            <td><code>query_synthesis.yaml</code></td>
+                            <td>Execution-guided repair; more retries raise yield and cost</td>
+                        </tr>
+                        <tr>
+                            <td><code>kb_reference.items_per_call</code></td>
+                            <td><code>query_synthesis.yaml</code></td>
+                            <td>Dialect knowledge base entries injected per call, wider sampling gives more syntactic variety</td>
+                        </tr>
+                        <tr>
+                            <td><code>parallel.max_llm_workers</code>, <code>max_validation_workers</code></td>
+                            <td><code>query_synthesis.yaml</code></td>
+                            <td>Concurrency for generation and for execution validation</td>
+                        </tr>
+                        <tr>
+                            <td><code>diffs_per_db</code>, <code>min_coverage</code></td>
+                            <td><code>schema_synthesis.yaml</code></td>
+                            <td>How many divergences each database receives and the minimum coverage constraint</td>
+                        </tr>
+                        <tr>
+                            <td><code>save_raw_response</code></td>
+                            <td><code>query_synthesis.yaml</code></td>
+                            <td>Keeps the raw LLM response alongside each batch, useful for auditing failures</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p>
+                    A full run over the dev split calls the model thousands of times, so cost scales with
+                    <code>loops_per_difficulty</code>, <code>queries_per_call</code>, and the number of
+                    databases. For a trial, restrict <code>--databases</code> to one or two entries and keep
+                    <code>loops_per_difficulty</code> at 1.
+                </p>
+            </section>
+
+            <section id="difficulty">
+                <h2>6. Difficulty Levels</h2>
+                <p>
+                    Difficulty is defined by <em>translation</em> difficulty rather than structural complexity
+                    alone. A short query can be harder to translate than a long join if it hides a semantic
+                    trap, for example <code>LOG(x)</code>, which is the natural logarithm in MySQL but the
+                    base-10 logarithm in PostgreSQL. Two factors combine: the number and type of dialect
+                    divergences a query exercises, and the structural depth at which those divergences sit.
+                </p>
+                <table class="doc-table">
+                    <thead>
+                        <tr><th>Level</th><th>Divergences</th><th>Characteristics</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><strong>easy</strong></td><td>at most 1</td><td>Simple structure, one-to-one replacement suffices</td></tr>
+                        <tr><td><strong>medium</strong></td><td>1 to 2</td><td>Requires syntactic rewriting, but the points are independent</td></tr>
+                        <tr><td><strong>hard</strong></td><td>2 to 3</td><td>Co-occurring divergences involving structural rewriting</td></tr>
+                        <tr><td><strong>extra</strong></td><td>4 or more</td><td>Semantic traps nested inside CTEs, window functions, or subqueries</td></tr>
+                    </tbody>
+                </table>
+                <p>
+                    Every released query has been executed on its source engine and returned a non-empty
+                    result. Queries that failed to execute, or that returned no rows, are excluded from the
+                    release because an empty result is weakly discriminative: two different queries can both
+                    return nothing.
+                </p>
+            </section>
+
+            <section id="setup">
+                <h2>7. Database Setup</h2>
+                <p>
+                    Load the schema first, then the data, for each engine you intend to use. The commands
+                    below assume a local instance and a database named after the database directory.
+                </p>
+
+                <h3>MySQL</h3>
+<pre><code>mysql -u root -p -e "CREATE DATABASE &lt;db_name&gt;;"
+mysql -u root -p &lt;db_name&gt; &lt; &lt;db_name&gt;_schema_mysql.sql
+mysql -u root -p &lt;db_name&gt; &lt; &lt;db_name&gt;_data_mysql.sql</code></pre>
+
+                <h3>PostgreSQL</h3>
+<pre><code>createdb &lt;db_name&gt;
+psql -U postgres -d &lt;db_name&gt; -f &lt;db_name&gt;_schema_pg.sql
+psql -U postgres -d &lt;db_name&gt; -f &lt;db_name&gt;_data_pg.sql</code></pre>
+
+                <h3>Oracle</h3>
+<pre><code>sqlplus system/&lt;password&gt;@&lt;host&gt;:1521/XE @&lt;db_name&gt;_schema_oracle.sql
+sqlplus &lt;DB_NAME&gt;/&lt;password&gt;@&lt;host&gt;:1521/XE @&lt;db_name&gt;_data_oracle.sql</code></pre>
+
+                <p>
+                    Because primary-key values are written explicitly in the data scripts, loading order does
+                    not affect the identifiers, and the same rows exist in all three engines after import.
+                </p>
+            </section>
+
+            <section id="protocol">
+                <h2>8. Evaluation Protocol</h2>
+                <p>
+                    Two metrics are reported. Both are computed by executing queries on real engines rather
+                    than by comparing SQL text.
+                </p>
+                <ul class="doc-list">
+                    <li>
+                        <strong>Execution Success (ES)</strong>: the fraction of translated queries that
+                        execute on the target engine without error.
+                    </li>
+                    <li>
+                        <strong>Execution Match (EM)</strong>: the fraction of translated queries whose
+                        result set equals the result set of the source query executed on the source engine.
+                    </li>
+                </ul>
+                <p>
+                    <strong>Result comparison is order-insensitive.</strong> The evaluator normalizes each
+                    cell value, sorts the rows of both result sets by their content, and then compares row by
+                    row. Row order therefore does not affect the verdict, and a query whose output order is
+                    not fixed by an <code>ORDER BY</code> is judged on the set of rows it returns. The
+                    comparison is conservative: if the two engines return different row sets, the query is
+                    marked as a mismatch even when the translation itself is defensible. Errors of this kind
+                    lower a system's score rather than inflate it.
+                </p>
+                <p>
+                    The gap between ES and EM is informative. A query can execute successfully and still
+                    return the wrong answer, for example when a function shares a name but not a meaning
+                    across dialects. That gap is where dialect-specific semantic traps appear.
+                </p>
+            </section>
+
+            <section id="running">
+                <h2>9. Running the Evaluation</h2>
+                <p>
+                    The evaluation toolkit lives in the
+                    <a href="https://github.com/chameleon-bench/Chameleon-Source" target="_blank" rel="noopener">Chameleon-Source</a>
+                    repository. It takes a source query file and a translated query file, both in JSON, and
+                    writes a report.
+                </p>
+<pre><code>python -m eval.run_eval \
+    --source-queries source_queries.json \
+    --translated-queries translated_queries.json \
+    --output eval_results.json \
+    --split dev \
+    --dataset-dir dataset \
+    --db-config config/database_sync.yaml \
+    --workers 8 \
+    --query-timeout 30</code></pre>
+                <table class="doc-table">
+                    <thead>
+                        <tr><th>Option</th><th>Meaning</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>--source-queries</code></td><td>JSON array of source queries, with the fields shown in Section 3.3</td></tr>
+                        <tr><td><code>--translated-queries</code></td><td>JSON array of objects with <code>query_id</code> and <code>translated_sql</code></td></tr>
+                        <tr><td><code>--split</code></td><td><code>train</code>, <code>dev</code>, or <code>test</code></td></tr>
+                        <tr><td><code>--dataset-dir</code></td><td>Root of the unpacked dataset</td></tr>
+                        <tr><td><code>--db-config</code></td><td>YAML file holding MySQL, PostgreSQL, and Oracle connection settings</td></tr>
+                        <tr><td><code>--workers</code></td><td>Parallel execution workers</td></tr>
+                        <tr><td><code>--max-queries</code></td><td>Evaluate only the first N queries, useful for a quick check</td></tr>
+                    </tbody>
+                </table>
+                <p>
+                    The output is a JSON file with an overall <code>report</code>, per-difficulty and
+                    per-database breakdowns, and a <code>results</code> array holding the individual verdicts,
+                    including the executed target SQL and any error message. The same structure is what the
+                    <a href="index.html#leaderboard">leaderboard</a> is built from.
+                </p>
+            </section>
+
+            <section id="citation">
+                <h2>10. Citation</h2>
+<pre><code>@inproceedings{chameleon2026,
+  title     = {Chameleon: A Large-scale Benchmark for SQL Dialect Translation
+               via Divergence-Driven LLM Synthesis},
+  author    = {Anonymous},
+  booktitle = {Proceedings of the International Conference on Very Large Data Bases (VLDB)},
+  year      = {2026},
+  note      = {Anonymous submission}
+}</code></pre>
+                <p>
+                    Questions and issues about the benchmark or the evaluation toolkit can be raised in the
+                    <a href="https://github.com/chameleon-bench/Chameleon-Source/issues" target="_blank" rel="noopener">issue tracker</a>.
+                </p>
+            </section>
+
+        </main>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <img src="logo.png" alt="Chameleon" class="logo-img footer-logo-img">
+                    <span class="logo-text">Chameleon</span>
+                </div>
+                <p class="footer-desc">
+                    A large-scale benchmark for SQL dialect translation via divergence-driven end-to-end LLM synthesis.
+                </p>
+                <div class="footer-links">
+                    <a href="index.html">Home</a>
+                    <a href="docs.html">Documentation</a>
+                    <a href="index.html#preview">Preview</a>
+                    <a href="index.html#download">Download</a>
+                </div>
+                <p class="footer-copy">
+                    &copy; 2026 Chameleon Benchmark. Anonymous submission. All rights reserved.
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,1402 @@
+[
+{
+"db": "academic_research_and_evaluation",
+"dialect": "Oracle",
+"difficulty": "Easy",
+"query_id": 1,
+"sql": "SELECT \"rq\".\"question_id\", \"rq\".\"question_text\", \"s\".\"submitter_name\", NVL(\"s\".\"email\", 'no-email@unknown.com') AS \"contact_email\" FROM \"research_questions\" \"rq\" JOIN \"submitters\" \"s\" ON \"rq\".\"submitter_id\" = \"s\".\"submitter_id\" WHERE \"rq\".\"is_approved\" = 1"
+},
+{
+"db": "academic_research_and_evaluation",
+"dialect": "Oracle",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT EXTRACT(MONTH FROM \"rq\".\"submission_date\") AS \"submission_month\", \"s\".\"submitter_name\", NVL(\"rq\".\"revised_question_id\", 0) AS \"revision_indicator\", COUNT(*) AS \"question_count\" FROM \"research_questions\" \"rq\" INNER JOIN \"submitters\" \"s\" ON \"rq\".\"submitter_id\" = \"s\".\"submitter_id\" WHERE \"rq\".\"final_score\" = 0 AND \"rq\".\"status\" IN ('pending_review', 'approved') GROUP BY EXTRACT(MONTH FROM \"rq\".\"submission_date\"), \"s\".\"submitter_name\", NVL(\"rq\".\"revised_question_id\", 0) ORDER BY \"submission_month\", \"question_count\" DESC"
+},
+{
+"db": "agricultural_climate_impact_assessment",
+"dialect": "MySQL",
+"difficulty": "Hard",
+"query_id": 2,
+"sql": "SELECT zone_name, data_source, avg_value, DENSE_RANK() OVER (PARTITION BY zone_name ORDER BY avg_value DESC) AS `rank` FROM (SELECT cz.zone_name, ad.data_source, AVG(ad.value) AS avg_value FROM agricultural_data ad INNER JOIN climate_zones cz ON ad.zone_id = cz.zone_id GROUP BY cz.zone_name, ad.data_source) AS sub WHERE avg_value > 100"
+},
+{
+"db": "agricultural_climate_impact_assessment",
+"dialect": "MySQL",
+"difficulty": "Extra",
+"query_id": 5,
+"sql": "SELECT pm.project_id, GROUP_CONCAT(CONCAT('\"', u.user_name, '\": \"', u.email, '\"') SEPARATOR ', ') AS json_users, LENGTH(u.user_name) AS name_bytes FROM project_members pm INNER JOIN users u ON pm.user_id = u.user_id WHERE pm.project_id IN (SELECT p.project_id FROM research_projects p WHERE LENGTH(p.project_name) - LENGTH(REPLACE(LOWER(p.project_name), 'a', '')) > 2) GROUP BY pm.project_id, u.user_name ORDER BY pm.project_id, name_bytes DESC"
+},
+{
+"db": "agricultural_crop_yield_analysis",
+"dialect": "PostgreSQL",
+"difficulty": "Easy",
+"query_id": 1,
+"sql": "SELECT county_name, average_temperature, average_rainfall, elevation FROM counties WHERE soil_type = 'Loam' ORDER BY elevation ASC"
+},
+{
+"db": "agricultural_crop_yield_analysis",
+"dialect": "PostgreSQL",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT c.county_name, c.average_rainfall, EXTRACT(YEAR FROM y.harvest_date::date) AS harvest_year FROM counties c INNER JOIN yields y ON c.county_id = y.county_id WHERE c.average_rainfall > 900 AND y.harvest_date::date < CURRENT_DATE ORDER BY harvest_year DESC"
+},
+{
+"db": "api_resource_management_and_endpoint_description",
+"dialect": "Oracle",
+"difficulty": "Hard",
+"query_id": 1,
+"sql": "SELECT * FROM (SELECT \"e\".\"endpoint_id\", \"e\".\"uri\", \"v\".\"version_number\", SUM(\"eu\".\"access_count\") AS \"total_access\", ROUND(AVG(\"eu\".\"response_time\"), 2) AS \"avg_response\", MOD(SUM(\"eu\".\"access_count\"), 2) AS \"access_parity\" FROM \"api_endpoints\" \"e\" INNER JOIN \"api_versions\" \"v\" ON \"e\".\"version_id\" = \"v\".\"version_id\" INNER JOIN \"endpoint_usage\" \"eu\" ON \"e\".\"endpoint_id\" = \"eu\".\"endpoint_id\" GROUP BY \"e\".\"endpoint_id\", \"e\".\"uri\", \"v\".\"version_number\" ORDER BY \"total_access\" DESC) WHERE ROWNUM <= 5"
+},
+{
+"db": "api_resource_management_and_endpoint_description",
+"dialect": "Oracle",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH \"usage_stats\" AS (\n  SELECT \n    \"eu\".\"endpoint_id\",\n    \"ae\".\"uri\",\n    \"ae\".\"http_method\",\n    TO_CHAR(\"eu\".\"access_date\", 'MONTH') AS \"access_month\",\n    TO_CHAR(\"eu\".\"access_date\", 'YYYY-MM') AS \"month_key\",\n    SUM(\"eu\".\"access_count\") AS \"total_access\",\n    TRUNC(AVG(\"eu\".\"response_time\"), 6) AS \"avg_response\",\n    PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY \"eu\".\"access_count\") AS \"median_access\",\n    GREATEST(SUM(\"eu\".\"error_count\"), NULL, 5) AS \"error_tolerance\"\n  FROM \"endpoint_usage\" \"eu\"\n  INNER JOIN \"api_endpoints\" \"ae\" ON \"eu\".\"endpoint_id\" = \"ae\".\"endpoint_id\"\n  WHERE \"eu\".\"access_date\" >= ADD_MONTHS(TO_DATE('2023-01-01', 'YYYY-MM-DD'), -6)\n  GROUP BY \"eu\".\"endpoint_id\", \"ae\".\"uri\", \"ae\".\"http_method\", TO_CHAR(\"eu\".\"access_date\", 'MONTH'), TO_CHAR(\"eu\".\"access_date\", 'YYYY-MM')\n),\n\"ranked_stats\" AS (\n  SELECT \n    \"us\".*, \n    RANK() OVER (PARTITION BY \"us\".\"month_key\" ORDER BY \"us\".\"total_access\" DESC) AS \"month_rank\",\n    CASE \n      WHEN \"us\".\"avg_response\" < (SELECT AVG(\"eu2\".\"response_time\") FROM \"endpoint_usage\" \"eu2\" WHERE \"eu2\".\"endpoint_id\" = \"us\".\"endpoint_id\") \n      THEN 'fast'\n      ELSE 'slow'\n    END AS \"performance_tier\",\n    NULL AS \"rank_letter\"\n  FROM \"usage_stats\" \"us\"\n)\nSELECT \n  \"rs\".\"access_month\",\n  \"rs\".\"uri\",\n  \"rs\".\"http_method\",\n  \"rs\".\"total_access\",\n  \"rs\".\"avg_response\",\n  \"rs\".\"median_access\",\n  \"rs\".\"error_tolerance\",\n  \"rs\".\"month_rank\",\n  \"rs\".\"performance_tier\",\n  CHR(65 + \"rs\".\"month_rank\") AS \"rank_letter\"\nFROM \"ranked_stats\" \"rs\"\nWHERE \"rs\".\"month_rank\" <= 3\nORDER BY \"rs\".\"month_key\" DESC, \"rs\".\"total_access\" DESC\nFETCH FIRST 15 ROWS ONLY"
+},
+{
+"db": "apparel_size_and_measurement_database",
+"dialect": "Oracle",
+"difficulty": "Easy",
+"query_id": 2,
+"sql": "SELECT COUNT(*) AS \"cnt\", AVG(NVL(\"industry_standard\", 0)) AS \"avg_std\" FROM \"sizes\" WHERE \"industry_standard\" = 1"
+},
+{
+"db": "apparel_size_and_measurement_database",
+"dialect": "Oracle",
+"difficulty": "Medium",
+"query_id": 2,
+"sql": "SELECT \"c\".\"first_name\" || ' ' || \"c\".\"last_name\" AS full_name, \"c\".\"preferred_size_category\", LISTAGG(\"cm\".\"cuff_circumference\", ', ') WITHIN GROUP (ORDER BY \"cm\".\"cuff_circumference\") AS cuff_list FROM \"customers\" \"c\" LEFT JOIN \"customer_measurements\" \"cm\" ON \"c\".\"customer_id\" = \"cm\".\"customer_id\" WHERE \"c\".\"gender\" = 'Women' GROUP BY \"c\".\"first_name\", \"c\".\"last_name\", \"c\".\"preferred_size_category\" ORDER BY full_name"
+},
+{
+"db": "apparel_size_chart_and_inventory_management",
+"dialect": "PostgreSQL",
+"difficulty": "Hard",
+"query_id": 1,
+"sql": "SELECT DISTINCT ON (p.category) p.category, p.product_name, CAST(p.price AS MONEY) AS price_as_money, TO_CHAR(CURRENT_DATE, 'FMSS') AS seconds_today FROM products p INNER JOIN inventory i ON p.product_id = i.product_id INNER JOIN sales s ON p.product_id = s.product_id ORDER BY p.category, s.sale_date DESC NULLS LAST"
+},
+{
+"db": "apparel_size_chart_and_inventory_management",
+"dialect": "PostgreSQL",
+"difficulty": "Extra",
+"query_id": 2,
+"sql": "WITH sales_summary AS (\n  SELECT p.product_id, p.product_name, p.category,\n         SUM(s.quantity) AS total_sold,\n         AVG(SUM(s.quantity)) OVER (PARTITION BY p.category ORDER BY SUM(s.quantity) DESC\n           RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW EXCLUDE GROUP) AS running_avg\n  FROM sales s\n  INNER JOIN products p ON s.product_id = p.product_id\n  GROUP BY p.product_id, p.product_name, p.category\n),\nproduct_rank AS (\n  SELECT ss.*,\n         RANK() OVER (ORDER BY ss.total_sold DESC) AS rank\n  FROM sales_summary ss\n)\nSELECT pr.rank, pr.product_name, pr.category, pr.total_sold,\n       CAST(pr.total_sold AS DECIMAL(10,2)) AS sold_decimal,\n       TO_CHAR(pr.running_avg, 'FM99.00') AS avg_format\nFROM product_rank pr\nWHERE pr.rank <= 5\nORDER BY pr.rank"
+},
+{
+"db": "apparel_size_measurement_and_inventory_management_459977",
+"dialect": "PostgreSQL",
+"difficulty": "Easy",
+"query_id": 1,
+"sql": "SELECT product_name, TO_CHAR(price, '999.99') AS formatted_price, COALESCE(description, 'No description') AS product_description FROM products ORDER BY product_name"
+},
+{
+"db": "apparel_size_measurement_and_inventory_management_459977",
+"dialect": "PostgreSQL",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT TO_CHAR(p.created_at, 'YYYY-MM') AS creation_month, COUNT(DISTINCT p.product_id) AS product_count, ROUND(AVG(p.price)::numeric, 2) AS avg_price, COALESCE(AVG(s.outseam), 0) AS avg_outseam FROM products p INNER JOIN sizes s ON p.size_id = s.size_id INNER JOIN categories c ON p.category_id = c.category_id WHERE c.gender IN ('Male', 'Unisex') GROUP BY creation_month HAVING COUNT(DISTINCT p.product_id) >= 1 ORDER BY creation_month"
+},
+{
+"db": "assembly_and_dependency_management_for_azure_storage",
+"dialect": "PostgreSQL",
+"difficulty": "Hard",
+"query_id": 1,
+"sql": "SELECT DISTINCT ON (p.problem_id) p.problem_id, p.description, CONCAT(u.user_name, ' ', u.email) AS contact_info, COUNT(*) FILTER (WHERE r.applied_at IS NOT NULL) AS remediations_applied, COUNT(*) AS total_remediations FROM problems p INNER JOIN users u ON p.resolved_by = u.user_id INNER JOIN remediations r ON p.problem_id = r.problem_id GROUP BY p.problem_id, p.description, u.user_name, u.email, r.created_at ORDER BY p.problem_id, r.created_at DESC"
+},
+{
+"db": "assembly_and_dependency_management_for_azure_storage",
+"dialect": "PostgreSQL",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH assembly_stats AS (  SELECT a.assembly_id, a.assembly_name, a.created_at,          LOG(COALESCE(p.problem_count, 1)) AS log_problems,          GREATEST(CAST(SPLIT_PART(a.expected_version, '.', 1) AS INTEGER) / NULLIF(av.version_count, 0), CAST(SPLIT_PART(a.actual_version, '.', 1) AS INTEGER), NULL) AS effective_version_ratio,          TO_CHAR(a.created_at, 'Day, DD Month YYYY HH12:MI AM') AS creation_date   FROM assemblies a   LEFT JOIN (SELECT assembly_id, COUNT(*) AS problem_count FROM problems GROUP BY assembly_id) p ON a.assembly_id = p.assembly_id   LEFT JOIN (SELECT assembly_id, COUNT(*) AS version_count, MAX(version_number) AS latest_version FROM assembly_versions GROUP BY assembly_id) av ON a.assembly_id = av.assembly_id), ranked_assemblies AS (  SELECT assembly_name, log_problems, effective_version_ratio, creation_date,          RANK() OVER (PARTITION BY TO_CHAR(created_at, 'YYYY-MM') ORDER BY log_problems DESC) AS rank   FROM assembly_stats) SELECT assembly_name, log_problems, COALESCE(effective_version_ratio, 0) AS version_ratio, creation_date FROM ranked_assemblies WHERE rank <= 3 ORDER BY log_problems DESC"
+},
+{
+"db": "automotive_dealership_inventory_management",
+"dialect": "MySQL",
+"difficulty": "Easy",
+"query_id": 3,
+"sql": "SELECT sale_id, DATE_FORMAT(sale_date, '%W') AS weekday_name FROM sales WHERE YEAR(sale_date) = 2024"
+},
+{
+"db": "automotive_dealership_inventory_management",
+"dialect": "MySQL",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT d.dealer_name, IFNULL(COUNT(di.incentive_id), 0) AS incentive_count FROM dealers d LEFT JOIN dealer_incentives di ON d.dealer_id = di.dealer_id GROUP BY d.dealer_name ORDER BY incentive_count DESC"
+},
+{
+"db": "automotive_telemetry_data_management",
+"dialect": "MySQL",
+"difficulty": "Hard",
+"query_id": 4,
+"sql": "SELECT t.track_name, ts.session_type, ts.session_date, df.file_path, SUBSTRING_INDEX(df.file_path, '/', -1) AS file_name, LOCATE('.', df.file_path) AS dot_pos, CASE WHEN df.file_path LIKE CONCAT('%', '.', '%') THEN 'binary' ELSE 'text' END AS file_category FROM test_tracks t INNER JOIN test_sessions ts ON t.track_id = ts.track_id INNER JOIN sessions_files sf ON ts.session_id = sf.session_id INNER JOIN data_files df ON sf.file_id = df.file_id INNER JOIN (SELECT session_id FROM test_sessions WHERE session_duration > 60 ORDER BY number_of_laps DESC LIMIT 3) AS limited_sessions ON ts.session_id = limited_sessions.session_id ORDER BY ts.number_of_laps DESC"
+},
+{
+"db": "automotive_telemetry_data_management",
+"dialect": "MySQL",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH session_stats AS (SELECT s.session_id, v.vehicle_name, s.session_duration, s.number_of_laps, s.session_date, DATE_FORMAT(STR_TO_DATE(s.session_date, '%Y-%m-%d'), '%W, %M %d, %Y') AS formatted_date, IFNULL(s.number_of_laps, 0) AS laps_filled, RAND(12345) AS random_factor FROM test_sessions s INNER JOIN vehicles v ON s.vehicle_id = v.vehicle_id WHERE s.session_duration > 0), efficiency AS (SELECT session_id, vehicle_name, formatted_date, session_duration, laps_filled, IF(laps_filled > 0, laps_filled / session_duration * 60, 0) AS laps_per_hour, random_factor FROM session_stats WHERE formatted_date IS NOT NULL) SELECT vehicle_name, formatted_date, session_duration, laps_filled, laps_per_hour, random_factor FROM efficiency ORDER BY IFNULL(laps_per_hour, 999999) DESC, formatted_date ASC"
+},
+{
+"db": "aviation_flight_log_and_routing_management",
+"dialect": "MySQL",
+"difficulty": "Easy",
+"query_id": 2,
+"sql": "SELECT CONCAT(first_name, ' ', last_name) AS full_name, email FROM users WHERE role = 'Pilot' ORDER BY last_name LIMIT 5"
+},
+{
+"db": "aviation_flight_log_and_routing_management",
+"dialect": "MySQL",
+"difficulty": "Medium",
+"query_id": 3,
+"sql": "SELECT fl.log_id, fl.event_type, DATE_FORMAT(STR_TO_DATE(fl.event_time, '%Y-%m-%d %H:%i:%s'), '%Y-%m-%d %H:%i:%s') AS formatted_time, u.first_name FROM flight_logs fl INNER JOIN users u ON fl.user_id = u.user_id WHERE fl.event_type = 'departure'"
+},
+{
+"db": "baseball_team_standings_and_statistics",
+"dialect": "Oracle",
+"difficulty": "Hard",
+"query_id": 1,
+"sql": "SELECT \"t\".\"team_name\",        ORA_HASH(\"t\".\"team_name\", 3) AS \"hash_bucket\",        DECODE(ORA_HASH(\"t\".\"team_name\", 3), 0, 'Group A', 1, 'Group B', 2, 'Group C', 'Group D') AS \"team_group\",        ROUND(\"s\".\"win_percentage\", 3) AS \"win_pct_rounded\" FROM \"teams\" \"t\" INNER JOIN \"standings\" \"s\" ON \"t\".\"team_id\" = \"s\".\"team_id\" WHERE \"t\".\"founded_year\" > 1890 ORDER BY \"win_pct_rounded\" DESC"
+},
+{
+"db": "baseball_team_standings_and_statistics",
+"dialect": "Oracle",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH division_stats AS (SELECT d.\"division_id\", d.\"division_name\", COUNT(t.\"team_id\") AS team_count, SUM(s.\"win\") AS total_wins, SUM(s.\"loss\") AS total_losses, TRUNC(AVG(s.\"runs_scored\"), 0) AS avg_runs_scored, TRUNC(AVG(s.\"runs_allowed\"), 0) AS avg_runs_allowed FROM \"divisions\" d INNER JOIN \"teams\" t ON d.\"division_id\" = t.\"division_id\" INNER JOIN \"standings\" s ON t.\"team_id\" = s.\"team_id\" GROUP BY d.\"division_id\", d.\"division_name\"), ranked_divisions AS (SELECT ds.\"division_name\", ds.team_count, ds.total_wins, ds.total_losses, ds.avg_runs_scored, ds.avg_runs_allowed, GREATEST(ds.total_wins - ds.total_losses, ds.avg_runs_scored - ds.avg_runs_allowed, 0) AS performance_margin, RANK() OVER (ORDER BY ds.total_wins DESC, ds.total_losses ASC) AS division_rank, NTILE(3) OVER (ORDER BY ds.avg_runs_scored DESC) AS scoring_tier FROM division_stats ds) SELECT rd.\"division_name\", rd.division_rank, rd.scoring_tier, rd.total_wins, rd.total_losses, rd.avg_runs_scored, rd.avg_runs_allowed, rd.performance_margin, CASE WHEN rd.scoring_tier = 1 THEN 'High Scoring' WHEN rd.scoring_tier = 2 THEN 'Mid Scoring' ELSE 'Low Scoring' END AS scoring_category, TO_CHAR(SYSDATE, 'YYYY-MM-DD HH24:MI:SS') AS analysis_timestamp FROM ranked_divisions rd ORDER BY rd.division_rank"
+},
+{
+"db": "basketball_game_play_by_play_data",
+"dialect": "MySQL",
+"difficulty": "Easy",
+"query_id": 2,
+"sql": "SELECT player_name, IFNULL(player_salary, 0) AS salary_amount FROM players WHERE team_id = 1"
+},
+{
+"db": "basketball_game_play_by_play_data",
+"dialect": "MySQL",
+"difficulty": "Medium",
+"query_id": 2,
+"sql": "SELECT DATE_FORMAT(STR_TO_DATE(g.game_date, '%Y-%m-%d'), '%W') AS game_weekday, t.team_name AS home_team, g.attendance FROM games g INNER JOIN teams t ON g.home_team_id = t.team_id WHERE g.attendance > 18500 ORDER BY game_weekday"
+},
+{
+"db": "bike_sharing_and_usage_analytics",
+"dialect": "Oracle",
+"difficulty": "Hard",
+"query_id": 2,
+"sql": "SELECT \"t\".\"trip_id\",        TO_CHAR(TO_TIMESTAMP(\"t\".\"starttime\", 'YYYY-MM-DD HH24:MI:SS'), 'HH24:MI:SS') AS \"start_time_fmt\",        POWER(\"t\".\"cost\", 2) AS \"cost_squared\" FROM \"trips\" \"t\" INNER JOIN \"stations\" \"s\" ON \"t\".\"start_station_id\" = \"s\".\"station_id\" WHERE \"s\".\"station_id\" IN (SELECT \"station_id\" FROM \"stations\" WHERE \"capacity\" > 15)"
+},
+{
+"db": "bike_sharing_and_usage_analytics",
+"dialect": "Oracle",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT \"b\".\"bike_model\", NVL(AVG(\"t\".\"cost\"), 0) AS \"avg_cost\", LISTAGG(\"s\".\"station_name\", ', ') WITHIN GROUP (ORDER BY \"s\".\"station_name\") AS \"stations_used\" FROM \"trips\" \"t\" INNER JOIN \"bikes\" \"b\" ON \"t\".\"bike_id\" = \"b\".\"bike_id\" INNER JOIN (SELECT DISTINCT \"station_id\", \"station_name\" FROM \"stations\") \"s\" ON \"t\".\"start_station_id\" = \"s\".\"station_id\" WHERE \"t\".\"cost\" IS NOT NULL GROUP BY \"b\".\"bike_id\", \"b\".\"bike_model\" ORDER BY \"avg_cost\" DESC"
+},
+{
+"db": "bike_sharing_pattern_analysis",
+"dialect": "Oracle",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH hourly_rentals AS (SELECT r.\"rental_id\", r.\"dteday\", r.\"hr\", r.\"cnt\", r.\"season\", r.\"weathersit\", TO_CHAR(r.\"dteday\", 'Day, Month DD, YYYY') AS \"formatted_date\", TO_CHAR(r.\"dteday\", 'YYYY-MM') AS \"rental_month\", GREATEST(r.\"cnt\", 0) AS \"adjusted_cnt\", NVL(r.\"cnt\" / NULLIF(r.\"cnt\", 0), 0) AS \"self_ratio\" FROM \"rentals\" r), ranked_rentals AS (SELECT hr.\"rental_month\", hr.\"hr\", hr.\"formatted_date\", hr.\"adjusted_cnt\", hr.\"self_ratio\", s.\"season_name\", ws.\"weather_situation_name\", RANK() OVER (PARTITION BY hr.\"rental_month\" ORDER BY hr.\"adjusted_cnt\" DESC) AS \"monthly_rank\" FROM hourly_rentals hr LEFT JOIN \"seasons\" s ON hr.\"season\" = s.\"season_id\" LEFT JOIN \"weather_situation\" ws ON hr.\"weathersit\" = ws.\"weather_situation_id\") SELECT rr.\"rental_month\", rr.\"hr\", rr.\"weather_situation_name\", LISTAGG(rr.\"formatted_date\", '; ') WITHIN GROUP (ORDER BY rr.\"monthly_rank\") AS \"top_dates\", MAX(rr.\"adjusted_cnt\") AS \"peak_rentals\", REGEXP_REPLACE(rr.\"weather_situation_name\", '([A-Z])', '<\\1>') AS \"cleaned_weather\" FROM ranked_rentals rr WHERE rr.\"monthly_rank\" <= 3 GROUP BY rr.\"rental_month\", rr.\"hr\", rr.\"weather_situation_name\" ORDER BY rr.\"rental_month\", MIN(rr.\"monthly_rank\")"
+},
+{
+"db": "bike_sharing_pattern_analysis",
+"dialect": "Oracle",
+"difficulty": "Easy",
+"query_id": 1,
+"sql": "SELECT \"station_name\", \"current_bikes_count\" FROM (SELECT \"station_name\", \"current_bikes_count\" FROM \"stations\" WHERE \"capacity\" >= 40 ORDER BY \"current_bikes_count\" DESC) WHERE ROWNUM <= 3"
+},
+{
+"db": "biological_cell_transfection_data_management",
+"dialect": "MySQL",
+"difficulty": "Hard",
+"query_id": 1,
+"sql": "SELECT l.lab_id, l.lab_name, AVG(ts.transfection_efficiency) AS avg_efficiency, DATE_FORMAT(MIN(ts.transfection_date), '%c/%Y') AS earliest_study_month, ROW_NUMBER() OVER (ORDER BY AVG(ts.transfection_efficiency) DESC) AS `rank` FROM laboratories l INNER JOIN transfection_studies ts ON l.lab_id = ts.lab_id GROUP BY l.lab_id, l.lab_name HAVING COUNT(ts.study_id) >= 2 ORDER BY avg_efficiency DESC"
+},
+{
+"db": "biological_cell_transfection_data_management",
+"dialect": "MySQL",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH efficiency_stats AS (  SELECT ct.cell_name,          ts.transfection_efficiency,          LOG(ts.transfection_efficiency) AS log_eff,          GREATEST(ts.transfection_efficiency, (SELECT AVG(ts2.transfection_efficiency) FROM transfection_studies ts2 WHERE ts2.cell_id = ts.cell_id), NULL) AS adj_eff,          CASE WHEN ts.particle_size > 0 THEN ts.zeta_potential / ts.particle_size ELSE NULL END AS zeta_ratio,          DATE_FORMAT(ts.transfection_date, '%Y-%c') AS eff_month   FROM transfection_studies ts   INNER JOIN cell_types ct ON ts.cell_id = ct.cell_id), ranked AS (  SELECT es.*,          RANK() OVER (PARTITION BY es.eff_month ORDER BY es.transfection_efficiency DESC) AS month_rank,          IF(es.transfection_efficiency > 0.5, 'high', 'low') AS eff_category   FROM efficiency_stats es) SELECT cell_name, eff_month,        AVG(log_eff) AS avg_log_eff,        SUM(adj_eff) / COUNT(adj_eff) AS avg_adj_eff,        AVG(zeta_ratio) * 100 AS avg_zeta_ratio_pct,        SUM(IF(eff_category = 'high', 1, 0)) AS high_eff_count FROM ranked WHERE month_rank <= 2 GROUP BY cell_name, eff_month ORDER BY avg_log_eff DESC"
+},
+{
+"db": "botanical_data_collection_and_species_classification",
+"dialect": "PostgreSQL",
+"difficulty": "Easy",
+"query_id": 1,
+"sql": "SELECT genus || ' ' || species_name AS scientific_name, conservation_status FROM species WHERE conservation_status = 'Vulnerable' ORDER BY species_name"
+},
+{
+"db": "botanical_data_collection_and_species_classification",
+"dialect": "PostgreSQL",
+"difficulty": "Medium",
+"query_id": 3,
+"sql": "SELECT u.user_name, CASE WHEN u.role = 'data_curator' THEN 'Curator' ELSE 'Other' END AS role_category, STRING_AGG(d.dataset_name, ', ' ORDER BY d.dataset_name) AS datasets_created FROM users u LEFT JOIN datasets d ON u.user_id = d.created_by GROUP BY u.user_id, u.user_name, u.role ORDER BY u.user_name"
+},
+{
+"db": "breast_cancer_cell_line_and_tumor_data_management",
+"dialect": "Oracle",
+"difficulty": "Hard",
+"query_id": 2,
+"sql": "SELECT \"cl\".\"cell_line_name\", \"p\".\"patient_name\" || ' - ' || \"to\".\"outcome\" AS \"info\", (TO_DATE(\"cl\".\"authentication_date\", 'YYYY-MM-DD') - DATE '1970-01-01') * 86400 AS \"unix_time\" FROM \"cell_lines\" \"cl\" LEFT JOIN \"treatment_outcomes\" \"to\" ON 1=0 LEFT JOIN \"patients\" \"p\" ON \"to\".\"patient_id\" = \"p\".\"patient_id\" WHERE \"cl\".\"passage_number\" BETWEEN 10 AND 30"
+},
+{
+"db": "breast_cancer_cell_line_and_tumor_data_management",
+"dialect": "Oracle",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH \"passage_stats\" AS (\n  SELECT \"cl\".\"cell_line_id\",\n         \"cl\".\"cell_line_name\",\n         \"cl\".\"passage_number\",\n         \"cl\".\"authentication_date\",\n         GREATEST(\"cl\".\"passage_number\", NULL, 10) AS \"effective_passage\",\n         LEAST(\"cl\".\"passage_number\", 50) AS \"capped_passage\"\n  FROM \"cell_lines\" \"cl\"\n  WHERE \"cl\".\"hmsl_id\" BETWEEN 1000 AND 16777215\n),\n\"ranked_passage\" AS (\n  SELECT \"ps\".\"cell_line_id\",\n         \"ps\".\"cell_line_name\",\n         \"ps\".\"passage_number\",\n         \"ps\".\"effective_passage\",\n         \"ps\".\"capped_passage\",\n         CONCAT('Cell Line: ', \"ps\".\"cell_line_name\") AS \"concat_name\",\n         RANK() OVER (ORDER BY \"ps\".\"passage_number\" DESC) AS \"passage_rank\"\n  FROM \"passage_stats\" \"ps\"\n),\n\"subtype_counts\" AS (\n  SELECT \"cl2\".\"clin_subtype_id\",\n         COUNT(*) AS \"subtype_count\"\n  FROM \"cell_lines\" \"cl2\"\n  GROUP BY \"cl2\".\"clin_subtype_id\"\n)\nSELECT \"rp\".\"cell_line_name\",\n       \"rp\".\"passage_number\",\n       \"rp\".\"effective_passage\",\n       \"rp\".\"capped_passage\",\n       \"rp\".\"concat_name\",\n       \"rp\".\"passage_rank\",\n       NVL(\"sc\".\"subtype_count\", 0) AS \"subtype_total\"\nFROM \"ranked_passage\" \"rp\"\nLEFT JOIN \"subtype_counts\" \"sc\" ON \"rp\".\"cell_line_id\" = \"sc\".\"clin_subtype_id\"\nWHERE \"rp\".\"passage_rank\" <= 3\nORDER BY \"rp\".\"passage_rank\""
+},
+{
+"db": "breast_cancer_diagnosis_and_research",
+"dialect": "PostgreSQL",
+"difficulty": "Easy",
+"query_id": 3,
+"sql": "SELECT diagnosis_id, TO_CHAR(diagnosis_date, 'FMMM') AS month_num, diagnosis_result FROM diagnoses WHERE diagnosis_confidence >= 0.9"
+},
+{
+"db": "breast_cancer_diagnosis_and_research",
+"dialect": "PostgreSQL",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT p.name, p.age, STRING_AGG(d.diagnosis_result, ', ' ORDER BY d.diagnosis_date) AS diagnoses FROM patients p INNER JOIN diagnoses d ON p.patient_id = d.patient_id WHERE p.age > 50 GROUP BY p.patient_id, p.name, p.age ORDER BY p.age"
+},
+{
+"db": "cancer_research_data_management",
+"dialect": "PostgreSQL",
+"difficulty": "Hard",
+"query_id": 1,
+"sql": "SELECT DISTINCT ON (s.study_id) s.study_id, st.cancer_type, st.study_name, s.age / 1 AS age_years, c.analysis_date FROM studies st INNER JOIN samples s ON st.study_id = s.study_id INNER JOIN cna_data c ON s.sample_id = c.sample_id ORDER BY s.study_id, s.age DESC, c.analysis_date ASC"
+},
+{
+"db": "cancer_research_data_management",
+"dialect": "PostgreSQL",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH study_analysis AS (SELECT s.study_id, s.study_name, s.start_date, s.end_date, EXTRACT(DAY FROM COALESCE(s.end_date, CURRENT_DATE) - s.start_date) AS days_active, LOG(COALESCE(r.file_size, 1)) AS log_file_size, GREATEST(s.start_date, (SELECT MAX(s2.start_date) FROM studies s2 WHERE s2.institution = s.institution), NULL) AS max_start_by_inst, (EXTRACT(YEAR FROM AGE(COALESCE(s.end_date, CURRENT_DATE), s.start_date)) * 12 + EXTRACT(MONTH FROM AGE(COALESCE(s.end_date, CURRENT_DATE), s.start_date))) / 12 AS years_active FROM studies s LEFT JOIN raw_data_files r ON s.study_id = r.study_id) SELECT study_name, days_active, ROUND(log_file_size::numeric, 4) AS rounded_log_size, max_start_by_inst, years_active, RANK() OVER (ORDER BY days_active DESC) AS activity_rank FROM study_analysis WHERE days_active > 0 ORDER BY activity_rank"
+},
+{
+"db": "character_progression_and_statistics_in_role_playing_games",
+"dialect": "PostgreSQL",
+"difficulty": "Easy",
+"query_id": 2,
+"sql": "SELECT player_name || ' (' || email || ')' AS player_info FROM players WHERE active = true AND email ILIKE '%@example.com'"
+},
+{
+"db": "character_progression_and_statistics_in_role_playing_games",
+"dialect": "PostgreSQL",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT r.race_name, STRING_AGG(c.char_name, ', ' ORDER BY c.char_name) AS characters_list FROM races r INNER JOIN characters c ON r.race_id = c.race_id GROUP BY r.race_id, r.race_name ORDER BY r.race_name"
+},
+{
+"db": "community_facilities_and_accessibility_information",
+"dialect": "MySQL",
+"difficulty": "Hard",
+"query_id": 3,
+"sql": "SELECT ft.type_name, f.name, DATE_FORMAT(f.last_updated, '%W, %M %d, %Y') AS formatted_update, ROW_NUMBER() OVER (PARTITION BY ft.type_id ORDER BY f.last_updated DESC) AS rn, DATE_ADD(f.last_updated, INTERVAL 1 MINUTE_SECOND) AS updated_plus_1minsec FROM facility_types ft INNER JOIN facilities f ON ft.type_id = f.type_id"
+},
+{
+"db": "community_facilities_and_accessibility_information",
+"dialect": "MySQL",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH facility_cte AS (SELECT f.facility_id, f.name, f.state, ft.type_name, DATE_FORMAT(f.last_updated, '%W, %M %d, %Y %h:%i %p') AS formatted_update, LENGTH(f.contact_name) AS name_length, IF(f.wheelchair_access LIKE '%Full%', 'fully_accessible', IF(f.wheelchair_access LIKE '%Partial%', 'partially_accessible', 'unknown')) AS access_category FROM facilities f INNER JOIN facility_types ft ON f.type_id = ft.type_id), ranked AS (SELECT fc.*, RANK() OVER (PARTITION BY fc.state ORDER BY fc.formatted_update DESC) AS update_rank, LENGTH(fc.name) - fc.name_length AS name_diff FROM facility_cte fc) SELECT state, access_category, COUNT(*) AS facility_count, GROUP_CONCAT(name ORDER BY name SEPARATOR ', ') AS facility_list FROM ranked WHERE update_rank <= 3 GROUP BY state, access_category ORDER BY state, facility_count DESC"
+},
+{
+"db": "crime_analysis_and_community_correlation",
+"dialect": "PostgreSQL",
+"difficulty": "Easy",
+"query_id": 1,
+"sql": "SELECT alert_id, COALESCE(threshold, 0) AS effective_threshold, notification_method, notification_recipient FROM alerts WHERE is_active = true ORDER BY threshold ASC"
+},
+{
+"db": "crime_analysis_and_community_correlation",
+"dialect": "PostgreSQL",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT f.category, COALESCE(f.factor_description, 'N/A') AS description, STRING_AGG(f.factor_description, '; ' ORDER BY f.factor_id) AS all_descriptions FROM crime_factors f GROUP BY f.category, f.factor_id, description ORDER BY f.category"
+},
+{
+"db": "cryptocurrency_and_decentralized_finance__defi__analytics",
+"dialect": "PostgreSQL",
+"difficulty": "Hard",
+"query_id": 2,
+"sql": "SELECT token_id, velocity::INTEGER AS velocity_int, rank FROM (SELECT tv.token_id, tv.velocity, ROW_NUMBER() OVER (ORDER BY tv.velocity DESC) AS rank FROM token_velocities tv WHERE tv.time_interval = '24h') sub WHERE rank <= 5 ORDER BY rank"
+},
+{
+"db": "cryptocurrency_and_decentralized_finance__defi__analytics",
+"dialect": "PostgreSQL",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH provider_stats AS (  SELECT tl.liquidity_provider,          tl.token_id,          tl.total_liquidity,          tl.reserve0,          tl.reserve1,          LOG(tl.total_liquidity) AS log_liquidity,          GREATEST(tl.total_liquidity, (SELECT AVG(tl2.total_liquidity) FROM token_liquidity tl2 WHERE tl2.token_id = tl.token_id), NULL) AS effective_liquidity,          ROUND((tl.reserve0 / NULLIF(tl.reserve1, 0))::numeric, 3) AS reserve_ratio,          ROW_NUMBER() OVER (PARTITION BY tl.liquidity_provider ORDER BY tl.total_liquidity DESC) AS rn  FROM token_liquidity tl), ranked_providers AS (  SELECT liquidity_provider,          COUNT(*) AS pool_count,          AVG(log_liquidity) AS avg_log_liquidity,          SUM(CASE WHEN effective_liquidity IS NULL THEN 1 ELSE 0 END) AS null_effect_count,          AVG(reserve_ratio) AS avg_reserve_ratio  FROM provider_stats  WHERE rn <= 3  GROUP BY liquidity_provider) SELECT liquidity_provider,        pool_count,        ROUND(avg_log_liquidity::numeric, 4) AS truncated_avg_log,        null_effect_count,        ROUND(avg_reserve_ratio::numeric, 3) AS truncated_avg_ratio FROM ranked_providers ORDER BY avg_log_liquidity DESC"
+},
+{
+"db": "dance_competitions_and_awards_tracking",
+"dialect": "PostgreSQL",
+"difficulty": "Easy",
+"query_id": 2,
+"sql": "SELECT level, COUNT(*) AS total_dances, COUNT(CASE WHEN level = 'Advanced' THEN 1 END) AS advanced_count FROM dances GROUP BY level"
+},
+{
+"db": "dance_competitions_and_awards_tracking",
+"dialect": "PostgreSQL",
+"difficulty": "Medium",
+"query_id": 2,
+"sql": "SELECT ds.dance_style_name, SUM(ds.popularity) AS total_popularity, STRING_AGG(d.dance_name, ', ' ORDER BY d.dance_name) AS dance_names FROM dance_styles ds INNER JOIN dances d ON ds.dance_style_id = d.dance_style_id GROUP BY ds.dance_style_id, ds.dance_style_name ORDER BY total_popularity DESC"
+},
+{
+"db": "data_compression_and_performance_analysis",
+"dialect": "Oracle",
+"difficulty": "Hard",
+"query_id": 2,
+"sql": "SELECT \"co\".\"operation_id\", TO_CHAR(\"co\".\"start_time\", 'YYYY-MM-DD HH24:MI:SS') AS \"start_fmt\", TO_CHAR(\"co\".\"start_time\", 'Dy') AS \"day_abbr\", TRUNC(EXTRACT(HOUR FROM (\"co\".\"end_time\" - \"co\".\"start_time\")) * 60 + EXTRACT(MINUTE FROM (\"co\".\"end_time\" - \"co\".\"start_time\"))) AS \"duration_minutes\", \"cr\".\"cpu_usage\" FROM \"compression_operations\" \"co\" INNER JOIN \"compression_results\" \"cr\" ON \"co\".\"result_id\" = \"cr\".\"result_id\" WHERE \"co\".\"status\" = 'completed' AND \"cr\".\"cpu_usage\" < 80 ORDER BY \"co\".\"start_time\""
+},
+{
+"db": "data_compression_and_performance_analysis",
+"dialect": "Oracle",
+"difficulty": "Extra",
+"query_id": 2,
+"sql": "WITH \"months\" (\"month_id\", \"formatted_month\") AS (\n  SELECT TO_CHAR(ADD_MONTHS(TRUNC(SYSDATE, 'MM'), -11), 'YYYY-MM') AS \"month_id\",\n         TO_CHAR(ADD_MONTHS(TRUNC(SYSDATE, 'MM'), -11), 'Day, Month DD, YYYY') AS \"formatted_month\"\n  FROM DUAL\n  UNION ALL\n  SELECT TO_CHAR(ADD_MONTHS(TO_DATE(months.\"month_id\" || '-01', 'YYYY-MM-DD'), 1), 'YYYY-MM'),\n         TO_CHAR(ADD_MONTHS(TO_DATE(months.\"month_id\" || '-01', 'YYYY-MM-DD'), 1), 'Day, Month DD, YYYY')\n  FROM \"months\" months\n  WHERE months.\"month_id\" < TO_CHAR(SYSDATE, 'YYYY-MM')\n), \"monthly_ops\" AS (\n  SELECT \"m\".\"month_id\",\n         \"co\".\"result_id\",\n         \"cr\".\"method_id\",\n         \"cm\".\"method_name\"\n  FROM \"months\" \"m\"\n  LEFT JOIN \"compression_operations\" \"co\" ON TO_CHAR(\"co\".\"start_time\", 'YYYY-MM') = \"m\".\"month_id\"\n  LEFT JOIN \"compression_results\" \"cr\" ON \"co\".\"result_id\" = \"cr\".\"result_id\"\n  LEFT JOIN \"compression_methods\" \"cm\" ON \"cr\".\"method_id\" = \"cm\".\"method_id\"\n)\nSELECT \"month_id\",\n       LISTAGG(\"method_name\", ', ') WITHIN GROUP (ORDER BY \"method_name\") AS \"methods_used\",\n       COUNT(\"result_id\") AS \"operation_count\"\nFROM \"monthly_ops\"\nGROUP BY \"month_id\"\nORDER BY \"month_id\""
+},
+{
+"db": "demographic_and_immigration_data_tracking",
+"dialect": "MySQL",
+"difficulty": "Easy",
+"query_id": 4,
+"sql": "SELECT datasets.dataset_id, DATE_FORMAT(CAST(CONCAT(datasets.year, '-01-01 14:30:00') AS DATETIME), '%k') AS hour_from_year, datasets.value FROM datasets WHERE datasets.year = 2023 AND datasets.value > 100000 ORDER BY datasets.value DESC LIMIT 5"
+},
+{
+"db": "demographic_and_immigration_data_tracking",
+"dialect": "MySQL",
+"difficulty": "Medium",
+"query_id": 2,
+"sql": "SELECT d.year, COUNT(*) AS dataset_count, GROUP_CONCAT(c.country_name ORDER BY c.country_name SEPARATOR ', ') AS country_list FROM datasets d INNER JOIN countries c ON d.country_id = c.country_id GROUP BY d.year HAVING COUNT(*) >= 1 ORDER BY d.year DESC"
+},
+{
+"db": "demographic_and_population_data_analysis_952215",
+"dialect": "Oracle",
+"difficulty": "Hard",
+"query_id": 2,
+"sql": "SELECT \"al\".\"log_id\",        TO_BLOB(UTL_RAW.CAST_TO_RAW(\"dqm\".\"metric_value\")) AS \"metric_blob\",        NEXT_DAY(\"al\".\"access_date\", 'MONDAY') AS \"next_monday\" FROM \"access_logs\" \"al\" INNER JOIN \"datasets\" \"d\" ON \"al\".\"dataset_id\" = \"d\".\"dataset_id\" INNER JOIN \"data_quality_metrics\" \"dqm\" ON \"d\".\"dataset_id\" = \"dqm\".\"dataset_id\" WHERE \"d\".\"data_quality\" = 'high' AND \"al\".\"access_date\" >= TO_DATE('2023-06-01', 'YYYY-MM-DD') ORDER BY \"al\".\"access_date\""
+},
+{
+"db": "demographic_and_population_data_analysis_952215",
+"dialect": "Oracle",
+"difficulty": "Extra",
+"query_id": 4,
+"sql": "SELECT \"dqm\".\"metric_id\", \"dqm\".\"dataset_id\", \"dqm\".\"metric_name\", CAST(\"dqm\".\"metric_value\" AS NUMBER(20, 10)) AS metric_value_decimal, \"dc\".\"category_id\", \"dc\".\"name\" AS category_name, LEVEL AS category_level, TO_CHAR(TO_DATE('2024-01-01', 'YYYY-MM-DD') + NUMTODSINTERVAL(1, 'DAY'), 'DDD') AS dummy_day_of_year FROM \"data_quality_metrics\" \"dqm\" LEFT JOIN \"datasets\" \"d\" ON \"dqm\".\"dataset_id\" = \"d\".\"dataset_id\" LEFT JOIN \"demographic_categories\" \"dc\" ON \"dc\".\"parent_category_id\" IS NOT NULL WHERE \"dqm\".\"metric_name\" IN ('response_rate', 'completeness_score', 'margin_of_error') AND \"d\".\"year\" BETWEEN 2020 AND 2022 CONNECT BY NOCYCLE PRIOR \"dc\".\"category_id\" = \"dc\".\"parent_category_id\" ORDER BY \"dqm\".\"metric_id\", LEVEL"
+},
+{
+"db": "device_location_and_identity_management",
+"dialect": "Oracle",
+"difficulty": "Easy",
+"query_id": 1,
+"sql": "SELECT \"d\".\"device_name\", \"s\".\"status_name\", NVL(\"s\".\"severity\", 'Unknown') AS severity_level FROM \"devices\" \"d\" JOIN \"device_statuses\" \"s\" ON \"d\".\"status\" = \"s\".\"status_id\" WHERE \"s\".\"status_name\" IN ('Offline', 'Maintenance')"
+},
+{
+"db": "device_location_and_identity_management",
+"dialect": "Oracle",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT d.\"device_name\", dt.\"type_name\", NVL(dt.\"description\", 'No description') AS \"desc\", TO_CHAR(TO_DATE(d.\"last_update\", 'YYYY-MM-DD HH24:MI:SS'), 'IW') AS \"week_number\" FROM \"devices\" d JOIN \"device_types\" dt ON d.\"device_type\" = dt.\"type_id\" WHERE dt.\"manufacturer\" IN ('Nest', 'Siemens') ORDER BY d.\"device_name\""
+},
+{
+"db": "digital_advertising_campaign_management_200201",
+"dialect": "Oracle",
+"difficulty": "Hard",
+"query_id": 2,
+"sql": "SELECT * FROM (SELECT \"a\".\"advertiser_name\", \"c\".\"campaign_name\", \"c\".\"budget\" FROM \"advertisers\" \"a\" INNER JOIN \"campaigns\" \"c\" ON \"a\".\"advertiser_id\" = \"c\".\"advertiser_id\") PIVOT (LISTAGG(\"campaign_name\", ', ') WITHIN GROUP (ORDER BY \"budget\" DESC) FOR \"advertiser_name\" IN ('Real Chemistry' AS \"real_chem\", 'Digital Drew' AS \"digital_drew\", 'Ninjapromo' AS \"ninja\"))"
+},
+{
+"db": "digital_advertising_campaign_management_200201",
+"dialect": "Oracle",
+"difficulty": "Extra",
+"query_id": 3,
+"sql": "WITH \"bit_xor_agg\" AS (SELECT \"campaign_id\", \"date\", \"impressions\" FROM \"campaign_performance\" WHERE \"campaign_id\" IN (1, 2, 3)), \"json_check\" AS (SELECT \"cp\".\"campaign_id\", \"cp\".\"date\", \"cp\".\"impressions\", CASE WHEN JSON_EXISTS('{\"campaigns\": [1, 2, 3]}', '$.campaigns[*]' PASSING \"cp\".\"campaign_id\" AS \"value\") THEN 1 ELSE 0 END AS \"in_set\" FROM \"bit_xor_agg\" \"cp\") SELECT TO_CHAR(\"date\", 'HH24:MI:SS') AS \"time\", COUNT(*) AS \"cnt\", SUM(\"impressions\") AS \"total_impressions\" FROM \"json_check\" WHERE \"in_set\" = 1 GROUP BY TO_CHAR(\"date\", 'HH24:MI:SS') ORDER BY \"time\""
+},
+{
+"db": "disaster_preparedness_and_community_response_analysis",
+"dialect": "MySQL",
+"difficulty": "Easy",
+"query_id": 1,
+"sql": "SELECT resident_id, income, IFNULL(income, 0) AS adjusted_income FROM residents WHERE income > (SELECT AVG(income) FROM residents) ORDER BY income DESC LIMIT 3"
+},
+{
+"db": "disaster_preparedness_and_community_response_analysis",
+"dialect": "MySQL",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT s.resident_id, GROUP_CONCAT(r.resident_id ORDER BY r.resident_id SEPARATOR ', ') AS resident_ids, COUNT(*) AS source_count FROM residents r INNER JOIN information_sources s ON r.resident_id = s.resident_id WHERE s.src_local_media = 1 AND s.src_internet = 1 GROUP BY s.resident_id HAVING COUNT(*) > 0 ORDER BY source_count DESC"
+},
+{
+"db": "e_commerce_order_management_and_analysis_496275",
+"dialect": "Oracle",
+"difficulty": "Hard",
+"query_id": 3,
+"sql": "SELECT \"c\".\"customer_id\", \"c\".\"customer_name\", \"o\".\"order_id\", \"o\".\"total_cost\", TO_CHAR(TO_DATE(\"o\".\"order_date\", 'YYYY-MM-DD HH24:MI:SS'), 'YYYY-MM-DD HH24:MI:SS') AS \"order_date_fmt\", RANK() OVER (PARTITION BY \"c\".\"customer_id\" ORDER BY \"o\".\"total_cost\" DESC) AS \"cost_rank\" FROM \"customers\" \"c\" INNER JOIN \"orders\" \"o\" ON \"c\".\"customer_id\" = \"o\".\"customer_id\" WHERE \"o\".\"cancelled\" = 0"
+},
+{
+"db": "e_commerce_order_management_and_analysis_496275",
+"dialect": "Oracle",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH \"product_metrics\" AS (SELECT \"p\".\"product_id\", \"p\".\"product_name\", \"p\".\"stock_level\", \"p\".\"unit_price\", LN(\"p\".\"stock_level\") AS \"log_stock\", \"p\".\"unit_price\" / NULLIF(\"p\".\"stock_level\", 0) AS \"price_per_stock\", GREATEST(\"p\".\"unit_price\", \"p\".\"weight\", NULL) AS \"effective_max\", LEAST(\"p\".\"unit_price\", \"p\".\"weight\", NULL) AS \"effective_min\" FROM \"products\" \"p\" WHERE \"p\".\"stock_level\" > 0), \"ranked_metrics\" AS (SELECT \"pm\".*, RANK() OVER (PARTITION BY TRUNC(\"pm\".\"price_per_stock\", 0) ORDER BY \"pm\".\"log_stock\" DESC) AS \"price_rank\" FROM \"product_metrics\" \"pm\") SELECT \"rm\".\"product_name\", \"rm\".\"log_stock\", \"rm\".\"price_per_stock\", \"rm\".\"effective_max\", \"rm\".\"effective_min\", \"rm\".\"price_rank\" FROM \"ranked_metrics\" \"rm\" WHERE \"rm\".\"price_rank\" <= 3 ORDER BY \"rm\".\"log_stock\" DESC"
+},
+{
+"db": "education_and_degree_offerings",
+"dialect": "MySQL",
+"difficulty": "Easy",
+"query_id": 3,
+"sql": "SELECT faculty_name, appointment_date FROM faculty WHERE appointment_date = '2020-01-15'"
+},
+{
+"db": "education_and_degree_offerings",
+"dialect": "MySQL",
+"difficulty": "Medium",
+"query_id": 2,
+"sql": "SELECT d.degree_name, IFNULL(d.description, 'No description') AS degree_description, dl.minimum_credits, d.total_credits, d.total_credits <=> dl.minimum_credits AS credits_match FROM degrees d INNER JOIN degree_levels dl ON d.degree_level_id = dl.degree_level_id WHERE d.total_credits <=> dl.minimum_credits OR d.total_credits > 60"
+},
+{
+"db": "educational_unit_management_and_tracking",
+"dialect": "MySQL",
+"difficulty": "Hard",
+"query_id": 1,
+"sql": "SELECT e.student_id, e.unit_id, e.enrollment_date, JSON_EXTRACT(e.metadata, '$.source') AS enrollment_source, TIMESTAMPDIFF(DAY, LAG(e.enrollment_date) OVER (PARTITION BY e.student_id ORDER BY e.enrollment_date), e.enrollment_date) AS gap_days FROM unit_enrollments e WHERE e.status = 'active' ORDER BY e.student_id, e.enrollment_date"
+},
+{
+"db": "educational_unit_management_and_tracking",
+"dialect": "MySQL",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH enrollment_stats AS (  SELECT u.unit_id, u.title, u.credits,          COUNT(ue.enrollment_id) AS total_enrollments,          SUM(CASE WHEN ue.status = 'active' THEN 1 ELSE 0 END) AS active_enrollments,          u.credits / COUNT(ue.enrollment_id) AS ratio,          JSON_EXTRACT(u.metadata, '$.type') AS unit_type,          DATE_FORMAT(u.last_taught_date, '%Y-%m-01') AS last_taught_month   FROM units u   LEFT JOIN unit_enrollments ue ON u.unit_id = ue.unit_id   WHERE u.is_active = 1   GROUP BY u.unit_id, u.title, u.credits, u.metadata, u.last_taught_date), ranked AS (  SELECT es.*,          COALESCE(es.unit_type, 'unknown') AS unit_type_safe,          RANK() OVER (PARTITION BY es.last_taught_month ORDER BY es.total_enrollments DESC) AS rnk   FROM enrollment_stats es) SELECT r.unit_id, r.title, r.credits, r.total_enrollments,        r.active_enrollments, r.ratio,        r.unit_type_safe, r.last_taught_month FROM ranked r WHERE r.rnk <= 3 ORDER BY r.last_taught_month DESC, r.rnk"
+},
+{
+"db": "election_voting_data_and_analysis",
+"dialect": "PostgreSQL",
+"difficulty": "Easy",
+"query_id": 1,
+"sql": "SELECT location_name || ', ' || city || ', ' || state AS full_location, contact_phone FROM locations WHERE timezone ILIKE '%America%'"
+},
+{
+"db": "election_voting_data_and_analysis",
+"dialect": "PostgreSQL",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT l.location_name, TO_CHAR(DATE '2023-11-07', 'DD') AS day_of_month, COALESCE(SUM(v.votes), 0) AS total_votes FROM locations l INNER JOIN voting_data v ON l.location_id = v.location_id WHERE v.voting_status = 'confirmed' GROUP BY l.location_id, l.location_name ORDER BY total_votes DESC"
+},
+{
+"db": "electrical_and_sensor_data_monitoring",
+"dialect": "Oracle",
+"difficulty": "Hard",
+"query_id": 2,
+"sql": "SELECT \"data_id\", \"time_point\", \"ins_pwr\", \"j1\", \"j2\" FROM \"sensor_data\" WHERE NVL(\"j1\", 0) != NVL(\"j2\", 0) AND \"ins_pwr\" IS NOT NULL ORDER BY \"time_point\" DESC FETCH FIRST 10 ROWS ONLY"
+},
+{
+"db": "electrical_and_sensor_data_monitoring",
+"dialect": "Oracle",
+"difficulty": "Extra",
+"query_id": 3,
+"sql": "WITH formatted_data AS (\n  SELECT sd.\"site_id\",\n         sd.\"sensor_type\",\n         TO_CHAR(TO_DATE(sd.\"time_point\", 'YYYY-MM-DD HH24:MI:SS'), 'Day, Month DD, YYYY HH12:MI AM') AS \"formatted_time\",\n         sd.\"ins_pwr\",\n         sd.\"j1\",\n         sd.\"j2\",\n         CASE WHEN sd.\"j1\" <> sd.\"j2\" THEN 1 ELSE 0 END AS \"j1j2_mismatch_flag\"\n  FROM \"sensor_data\" sd\n  WHERE sd.\"ins_pwr\" IS NOT NULL\n),\naggregated AS (\n  SELECT fd.\"site_id\",\n         fd.\"sensor_type\",\n         MIN(fd.\"ins_pwr\") AS \"min_power\",\n         MAX(fd.\"ins_pwr\") AS \"max_power\",\n         TRUNC(AVG(fd.\"ins_pwr\"), 2) AS \"avg_power\",\n         SUM(fd.\"j1j2_mismatch_flag\") AS \"mismatch_count\",\n         LISTAGG(fd.\"formatted_time\", '; ') WITHIN GROUP (ORDER BY fd.\"ins_pwr\" DESC) AS \"time_list\"\n  FROM formatted_data fd\n  GROUP BY ROLLUP (fd.\"site_id\", fd.\"sensor_type\")\n)\nSELECT NVL(TO_CHAR(a.\"site_id\"), 'Total') AS \"site_label\",\n       NVL(a.\"sensor_type\", 'All Types') AS \"sensor_label\",\n       a.\"min_power\",\n       a.\"max_power\",\n       a.\"avg_power\",\n       a.\"mismatch_count\",\n       a.\"time_list\"\nFROM aggregated a\nORDER BY a.\"site_id\" NULLS LAST, a.\"sensor_type\" NULLS LAST"
+},
+{
+"db": "electrical_component_specifications_and_performance_metrics",
+"dialect": "PostgreSQL",
+"difficulty": "Easy",
+"query_id": 1,
+"sql": "SELECT component_id, component_name, manufacturer, part_number FROM components ORDER BY component_id ASC NULLS LAST"
+},
+{
+"db": "electrical_component_specifications_and_performance_metrics",
+"dialect": "PostgreSQL",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT component_name, manufacturer, TO_CHAR(last_updated, 'TMDay') AS update_day_name FROM components WHERE last_updated >= '2024-02-01' ORDER BY last_updated ASC"
+},
+{
+"db": "electrical_measurements_and_energy_monitoring",
+"dialect": "MySQL",
+"difficulty": "Hard",
+"query_id": 2,
+"sql": "SELECT m.device_id, DATE(m.timestamp) AS measurement_day, ROUND(AVG(m.prms), 2) AS avg_daily_power, ROUND(AVG(m.prms) / 1000, 4) AS avg_kw FROM measurements m WHERE m.timestamp >= DATE_ADD('2024-01-15 10:30:00', INTERVAL 1 DAY_MICROSECOND) AND m.timestamp < NOW() GROUP BY m.device_id, DATE(m.timestamp) HAVING AVG(m.prms) > 1000 ORDER BY avg_daily_power DESC LIMIT 5"
+},
+{
+"db": "electrical_measurements_and_energy_monitoring",
+"dialect": "MySQL",
+"difficulty": "Extra",
+"query_id": 2,
+"sql": "WITH monthly_avg AS (SELECT d.device_id, d.device_name, d.manufacturer, DATE_FORMAT(m.timestamp, '%Y-%m-01') AS month_start, AVG(m.prms) AS avg_prms FROM devices d INNER JOIN measurements m ON d.device_id = m.device_id WHERE d.manufacturer SOUNDS LIKE 'Simens' GROUP BY d.device_id, d.device_name, d.manufacturer, DATE_FORMAT(m.timestamp, '%Y-%m-01')), ranked AS (SELECT ma.*, RANK() OVER (PARTITION BY ma.month_start ORDER BY ma.avg_prms DESC) AS month_rank FROM monthly_avg ma) SELECT r.device_name, r.month_start, r.avg_prms, r.month_rank FROM ranked r WHERE r.month_rank <= 3 ORDER BY r.month_start, r.month_rank"
+},
+{
+"db": "emotion_recognition_and_sentiment_analysis",
+"dialect": "PostgreSQL",
+"difficulty": "Easy",
+"query_id": 1,
+"sql": "SELECT image_id, label, COALESCE(label_confidence, 0.0) AS confidence FROM image_labels WHERE label_type = 'emotion' ORDER BY label_confidence DESC"
+},
+{
+"db": "emotion_recognition_and_sentiment_analysis",
+"dialect": "PostgreSQL",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT c.industry, TO_CHAR(i.timestamp::timestamp, 'WW') AS week_number, COUNT(*) AS image_count FROM images i INNER JOIN clients c ON i.client_id = c.client_id WHERE EXTRACT(YEAR FROM i.timestamp::timestamp) = 2023 GROUP BY c.industry, week_number HAVING COUNT(*) > 0 ORDER BY c.industry, week_number"
+},
+{
+"db": "employee_information_and_company_management",
+"dialect": "PostgreSQL",
+"difficulty": "Hard",
+"query_id": 1,
+"sql": "SELECT DISTINCT ON (c.company_id) c.company_name, e.first_name || ' ' || e.last_name AS full_name, (CURRENT_DATE - e.hire_date::date)::integer AS tenure_days FROM companies c INNER JOIN employees e ON c.company_id = e.company_id ORDER BY c.company_id, e.hire_date ASC"
+},
+{
+"db": "employee_information_and_company_management",
+"dialect": "PostgreSQL",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH employee_metrics AS (SELECT e.employee_id, e.first_name, e.last_name, c.company_name, e.hire_date, pm.metric_value, pm.weight, LOG(pm.metric_value) AS log_metric, WIDTH_BUCKET(pm.metric_value, 0.0, 150.0, 5) AS score_bucket, EXTRACT(YEAR FROM AGE(e.hire_date::DATE)) AS tenure_years FROM employees e INNER JOIN companies c ON e.company_id = c.company_id INNER JOIN performance_metrics pm ON e.employee_id = pm.employee_id WHERE pm.metric_name = 'Code Quality'), ranked_metrics AS (SELECT company_name, first_name, last_name, TO_CHAR(hire_date::DATE, 'Day, DD Month YYYY') AS hire_full_date, log_metric, score_bucket, tenure_years, RANK() OVER (PARTITION BY score_bucket ORDER BY log_metric DESC) AS rank_in_bucket FROM employee_metrics) SELECT company_name, first_name, last_name, hire_full_date, log_metric, score_bucket, tenure_years, rank_in_bucket, CASE WHEN tenure_years / 2 > 0 THEN 'Senior' ELSE 'Junior' END AS seniority_level FROM ranked_metrics WHERE rank_in_bucket <= 3 ORDER BY score_bucket, rank_in_bucket"
+},
+{
+"db": "employee_management_and_organization",
+"dialect": "PostgreSQL",
+"difficulty": "Easy",
+"query_id": 1,
+"sql": "SELECT first_name || ' ' || last_name AS full_name, REPLACE(phone, ' ', '') AS clean_phone FROM employees WHERE employee_status = 'active'"
+},
+{
+"db": "employee_management_and_organization",
+"dialect": "PostgreSQL",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT e.employee_id, e.first_name, e.last_name, TO_CHAR(e.hire_date, 'YYYY-MM') AS hire_month, EXTRACT(DAY FROM e.hire_date) AS hire_day FROM employees e WHERE EXTRACT(YEAR FROM e.hire_date) = 2023 ORDER BY e.hire_date"
+},
+{
+"db": "employee_satisfaction_and_performance_analysis",
+"dialect": "MySQL",
+"difficulty": "Hard",
+"query_id": 1,
+"sql": "SELECT e.employee_id, SUBSTRING(e.employee_name, 1, 10) AS short_name, SQRT(POWER(e.satisfaction_level - 0.5, 2) + POWER(e.last_evaluation - 0.5, 2)) AS performance_distance, VERSION() AS db_version FROM employees e WHERE e.satisfaction_level > 0.6 AND e.last_evaluation > 0.7 ORDER BY performance_distance DESC LIMIT 10"
+},
+{
+"db": "employee_satisfaction_and_performance_analysis",
+"dialect": "MySQL",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH employee_project_hours AS (  SELECT e.employee_id,         e.employee_name,         SUM(ep.hours_worked) AS total_hours,         LENGTH(CAST(e.employee_name AS CHAR(100) CHARACTER SET utf8mb4)) AS name_bytes,         DATE_ADD('2024-01-01 10:00:00', INTERVAL '01:30:00' HOUR_SECOND) AS scheduled_end,         SUBSTRING(e.employee_email, LOCATE('@', e.employee_email) + 1) AS email_domain  FROM employees e  INNER JOIN employee_projects ep ON e.employee_id = ep.employee_id  GROUP BY e.employee_id, e.employee_name, e.employee_email) SELECT ep.total_hours,        ep.name_bytes,        ep.scheduled_end,        ep.email_domain,        CAST('2024-06-15 14:30:45.123456' AS DATETIME(6)) AS precise_timestamp FROM employee_project_hours ep WHERE ep.total_hours > 100 AND ep.email_domain LIKE '%.com%' ORDER BY ep.total_hours DESC"
+},
+{
+"db": "fashion_and_apparel_sizing_15400",
+"dialect": "MySQL",
+"difficulty": "Easy",
+"query_id": 1,
+"sql": "SELECT product_name, price, brand FROM products ORDER BY price DESC LIMIT 5"
+},
+{
+"db": "fashion_and_apparel_sizing_15400",
+"dialect": "MySQL",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT p.product_name, ps.size_name, ps.stock_quantity, IFNULL(pd.description, 'No description available') AS product_description FROM products p INNER JOIN product_sizes ps ON p.product_id = ps.product_id LEFT JOIN product_descriptions pd ON p.product_id = pd.product_id WHERE ps.stock_quantity > 0 ORDER BY p.product_name, ps.size_name"
+},
+{
+"db": "financial_market_analysis_and_target_price_prediction",
+"dialect": "PostgreSQL",
+"difficulty": "Hard",
+"query_id": 1,
+"sql": "SELECT DISTINCT ON (a.analyst_id) a.name AS analyst_name, s.company_name, ap.position_size FROM analysts a INNER JOIN analyst_portfolio ap ON a.analyst_id = ap.analyst_id INNER JOIN stocks s ON ap.stock_id = s.stock_id ORDER BY a.analyst_id, ap.position_size DESC"
+},
+{
+"db": "financial_market_analysis_and_target_price_prediction",
+"dialect": "PostgreSQL",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH prediction_accuracy AS (  SELECT a.analyst_id, a.name, p.stock_id, p.predicted_price, ma.share_price,          ABS(p.predicted_price - ma.share_price) / GREATEST(ma.share_price, 1) AS error_ratio,          LOG(p.predicted_price) AS log_predicted,          ROW_NUMBER() OVER (PARTITION BY a.analyst_id ORDER BY ABS(p.predicted_price - ma.share_price) ASC) AS best_pred_rank   FROM predictions p   INNER JOIN analysts a ON p.analyst_id = a.analyst_id   INNER JOIN market_analyses ma ON p.analysis_id = ma.analysis_id   WHERE p.confidence_level = 'High'), analyst_stats AS (  SELECT analyst_id, name,          AVG(error_ratio) AS avg_error,          COUNT(*) FILTER (WHERE error_ratio < 0.1) AS accurate_predictions,          REGEXP_REPLACE(name, '([A-Z])[a-z]+ [A-Z]', '\\1. ', 'g') AS initials   FROM prediction_accuracy   WHERE best_pred_rank <= 3   GROUP BY analyst_id, name) SELECT analyst_id, name, initials,        ROUND(avg_error::numeric, 4) AS avg_error_rounded,        accurate_predictions,        GREATEST(avg_error, NULL) AS null_test FROM analyst_stats ORDER BY avg_error ASC"
+},
+{
+"db": "financial_market_data_analysis_758074",
+"dialect": "MySQL",
+"difficulty": "Easy",
+"query_id": 1,
+"sql": "SELECT instrument_name, sector, industry FROM instruments WHERE instrument_name LIKE '%F%'"
+},
+{
+"db": "financial_market_data_analysis_758074",
+"dialect": "MySQL",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT i.instrument_name, i.sector, IFNULL(e.exchange_name, 'Unknown') AS exchange_name, m.volume FROM instruments i INNER JOIN market_data m ON i.instrument_id = m.instrument_id LEFT JOIN exchanges e ON i.exchange = e.exchange_id WHERE m.volume > 10000000 ORDER BY m.volume DESC"
+},
+{
+"db": "financial_market_data_and_analytics_220353",
+"dialect": "MySQL",
+"difficulty": "Hard",
+"query_id": 4,
+"sql": "SELECT c.client_id, IFNULL(AVG(q.query_duration), 0) AS avg_duration, DATE_FORMAT(MAX(STR_TO_DATE(q.query_date_time, '%Y-%m-%d %H:%i:%s')), '%W, %M %d, %Y') AS last_query_date FROM clients c LEFT JOIN queries q ON c.client_id = q.client_id GROUP BY c.client_id HAVING AVG(q.query_duration) > 0.3"
+},
+{
+"db": "financial_market_data_and_analytics_220353",
+"dialect": "MySQL",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH monthly_performance AS (  SELECT i.instrument_id, i.instrument_name, e.exchange_name, e.exchange_id,         md.close, md.event_timestamp,         DATE_FORMAT(md.event_timestamp, '%Y-%m') AS month_key,         LOG(md.close) AS log_close_ln,         GREATEST(md.close, NULL, md.open) AS effective_price,         TRUNCATE(md.close / 2, 4) AS half_close  FROM instruments i  INNER JOIN exchanges e ON i.exchange_id = e.exchange_id  INNER JOIN market_data md ON i.instrument_id = md.instrument_id  WHERE md.event_timestamp >= DATE_SUB('2024-06-01', INTERVAL 6 MONTH)), ranked AS (  SELECT mp.*,         RANK() OVER (PARTITION BY mp.exchange_id, mp.month_key ORDER BY mp.log_close_ln DESC) AS price_rank  FROM monthly_performance mp)SELECT r.exchange_name, r.month_key, r.instrument_name, r.close, r.log_close_ln, r.effective_price, r.half_close, r.price_rank FROM ranked r WHERE r.price_rank <= 3 ORDER BY r.exchange_name, r.month_key, r.price_rank"
+},
+{
+"db": "financial_market_data_tracking_and_analysis_952272",
+"dialect": "PostgreSQL",
+"difficulty": "Easy",
+"query_id": 2,
+"sql": "SELECT \"trader_name\" || ' - ' || \"email\" AS trader_info, \"role\" FROM \"traders\" WHERE \"email\" ILIKE '%@%'"
+},
+{
+"db": "financial_market_data_tracking_and_analysis_952272",
+"dialect": "PostgreSQL",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT s.symbol, s.company_name, TO_CHAR(md.date::date, 'YYYY-MM') AS month, AVG(md.close) AS avg_close FROM stocks s INNER JOIN market_data md ON s.stock_id = md.stock_id WHERE s.sector = 'Technology' AND s.market_cap > 500000000000.0 GROUP BY s.stock_id, s.symbol, s.company_name, month ORDER BY month, s.symbol"
+},
+{
+"db": "financial_performance_and_asset_management",
+"dialect": "MySQL",
+"difficulty": "Hard",
+"query_id": 5,
+"sql": "SELECT fr.ticker, fr.fiscal_period, c.cash_flow_from_oper_act, c.net_change_in_cash, LAG(c.cash_flow_from_oper_act) OVER (PARTITION BY fr.ticker ORDER BY fr.report_date) AS prev_oper_cash, CAST(c.cash_flow_from_oper_act / NULLIF(c.net_change_in_cash, 0) AS SIGNED) AS cash_efficiency_ratio, DATE_FORMAT(STR_TO_DATE(fr.report_date, '%Y-%m-%d'), '%Y-%m-%dT%H:%i:%s+08:00') AS iso_format FROM financial_reports fr INNER JOIN cash_flow_statement c ON fr.report_id = c.report_id WHERE c.net_change_in_cash > 0 ORDER BY fr.ticker, fr.report_date"
+},
+{
+"db": "financial_performance_and_asset_management",
+"dialect": "MySQL",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH efficiency_metrics AS (  SELECT fr.ticker,         fr.fiscal_period,         inc.revenue,         inc.net_income,         inc.operating_income,         inc.sga_expense,         GREATEST(inc.net_income / inc.revenue, NULL) AS profit_margin,         inc.revenue / inc.sga_expense AS revenue_per_sga,         CAST(inc.revenue AS SIGNED) / CAST(inc.sga_expense AS SIGNED) AS int_div_example  FROM financial_reports fr  INNER JOIN income_statement inc ON fr.report_id = inc.report_id  WHERE fr.status = 'published'), ranked AS (  SELECT em.*,         RANK() OVER (PARTITION BY em.fiscal_period ORDER BY em.revenue DESC) AS rank_in_period,         DATE_FORMAT(STR_TO_DATE('2023-04-01', '%Y-%m-%d'), '%W, %M %d, %Y') AS format_test  FROM efficiency_metrics em) SELECT r.ticker,       r.fiscal_period,       r.revenue,       r.profit_margin,       r.revenue_per_sga,       r.int_div_example,       r.rank_in_period,       r.format_test FROM ranked r WHERE r.rank_in_period <= 3 ORDER BY r.fiscal_period, r.rank_in_period"
+},
+{
+"db": "fitness_and_activity_tracking_448431",
+"dialect": "MySQL",
+"difficulty": "Easy",
+"query_id": 2,
+"sql": "SELECT DATE_FORMAT(start_time, '%Y-%m-01') AS activity_month, COUNT(*) AS activity_count, AVG(distance) AS avg_distance FROM activities WHERE distance > 0 GROUP BY DATE_FORMAT(start_time, '%Y-%m-01') ORDER BY activity_month"
+},
+{
+"db": "fitness_and_activity_tracking_448431",
+"dialect": "MySQL",
+"difficulty": "Medium",
+"query_id": 2,
+"sql": "SELECT DATE_FORMAT(a.start_time, '%Y-%m') AS activity_month, AVG(a.distance) AS avg_distance FROM activities a INNER JOIN devices d ON a.device_id = d.device_id WHERE a.is_manual = 0 GROUP BY activity_month HAVING AVG(a.distance) > 5 ORDER BY activity_month"
+},
+{
+"db": "food_service_and_meal_management",
+"dialect": "MySQL",
+"difficulty": "Hard",
+"query_id": 1,
+"sql": "SELECT m.meal_id, m.meal_name, JSON_EXTRACT(m.tags_json, '$[0]') AS first_tag, m.average_rating FROM meals m WHERE 'vegan' MEMBER OF (m.tags_json) AND m.average_rating > 4.0 ORDER BY m.average_rating DESC"
+},
+{
+"db": "food_service_and_meal_management",
+"dialect": "MySQL",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH meal_analysis AS (SELECT m.meal_id, m.meal_name, m.calories, m.fat, m.carbohydrates, m.protein, m.base_price, m.popularity_score, LOG(m.calories) AS log_calories, TRUNCATE(m.fat / m.protein, 2) AS fat_protein_ratio, GREATEST(m.popularity_score, (SELECT AVG(m2.popularity_score) FROM meals m2 WHERE m2.category_id = m.category_id), NULL) AS adjusted_score, m.tags_json FROM meals m WHERE JSON_CONTAINS(m.tags_json, '\"vegan\"')), ordered_meals AS (SELECT * FROM meal_analysis ORDER BY popularity_score DESC), aggregated AS (SELECT JSON_ARRAYAGG(ma.meal_name) AS top_meals_json, SUM(ma.log_calories) AS total_log_calories, AVG(ma.fat_protein_ratio) AS avg_ratio, SUM(IF(ma.adjusted_score IS NULL, 1, 0)) AS null_score_count FROM ordered_meals ma) SELECT * FROM aggregated"
+},
+{
+"db": "footwear_size_mapping_and_retail_management",
+"dialect": "MySQL",
+"difficulty": "Easy",
+"query_id": 1,
+"sql": "SELECT inventory_id, product_id, stock_level, DATE_FORMAT(last_updated, '%Y-%m-%d %H:%i:%s') AS formatted_update FROM inventory WHERE stock_level < 30 ORDER BY stock_level ASC LIMIT 5"
+},
+{
+"db": "footwear_size_mapping_and_retail_management",
+"dialect": "MySQL",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT DATE_FORMAT(f.created_at, '%Y-%m') AS resolution_month, u.user_name AS resolver_name, f.feedback_text, f.resolution_status FROM feedback f INNER JOIN users u ON f.resolved_by = u.user_id WHERE f.resolution_status = 'Resolved' ORDER BY resolution_month DESC, u.user_name"
+},
+{
+"db": "game_performance_metrics_across_different_algorithms",
+"dialect": "PostgreSQL",
+"difficulty": "Hard",
+"query_id": 1,
+"sql": "SELECT DISTINCT ON (r.department) r.department, r.researcher_name, a.algorithm_name, pm.score AS max_score, (a.json_metadata->>'paper_ref')::TEXT AS paper_reference FROM researchers r INNER JOIN algorithms a ON r.researcher_id = a.created_by INNER JOIN performance_metrics pm ON a.algorithm_id = pm.algorithm_id WHERE pm.score > 0 ORDER BY r.department, pm.score DESC"
+},
+{
+"db": "game_performance_metrics_across_different_algorithms",
+"dialect": "PostgreSQL",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH algorithm_rankings AS (\n  SELECT a.algorithm_id, a.algorithm_name, pm.score, pm.evaluation_date,\n         LOG(pm.training_time) AS log_training_time,\n         TRUNC(pm.training_time / pm.number_of_episodes, 2) AS time_per_episode,\n         GREATEST(pm.score, (SELECT AVG(pm2.score) FROM \"performance_metrics\" pm2 WHERE pm2.algorithm_id = pm.algorithm_id), NULL) AS effective_score,\n         ROW_NUMBER() OVER (PARTITION BY a.algorithm_id ORDER BY pm.evaluation_date DESC) AS rn\n  FROM \"algorithms\" a\n  INNER JOIN \"performance_metrics\" pm ON a.algorithm_id = pm.algorithm_id\n  WHERE pm.number_of_episodes > 0\n  AND a.oid_col IS NOT NULL\n),\nranked_algorithms AS (\n  SELECT algorithm_id, algorithm_name, log_training_time, time_per_episode, effective_score, rn\n  FROM algorithm_rankings\n  WHERE rn <= 3\n)\nSELECT algorithm_name,\n       TO_CHAR(AVG(log_training_time), 'FM9990.0000') AS avg_log_training_time,\n       TRUNC(AVG(time_per_episode), 2) AS avg_time_per_episode,\n       SUM(CASE WHEN effective_score IS NULL THEN 1 ELSE 0 END) FILTER (WHERE rn = 1) AS null_score_count_top,\n       COUNT(*) FILTER (WHERE effective_score IS NOT NULL) AS non_null_score_count\nFROM ranked_algorithms\nGROUP BY algorithm_name\nORDER BY avg_log_training_time DESC"
+},
+{
+"db": "gaming_statistics_and_analytics",
+"dialect": "MySQL",
+"difficulty": "Easy",
+"query_id": 1,
+"sql": "SELECT CHARSET(server_name) AS charset_of_server_name FROM game_servers LIMIT 1"
+},
+{
+"db": "gaming_statistics_and_analytics",
+"dialect": "MySQL",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT gs.server_name, gs.server_status, DATE_FORMAT(gs.created_at, '%Y-%m') AS creation_month, COUNT(gs2.stat_id) AS stat_count, IFNULL(GROUP_CONCAT(gs2.stat_id ORDER BY gs2.stat_id SEPARATOR ','), 'No Stats') AS stat_ids FROM game_servers gs LEFT JOIN game_statistics gs2 ON gs.server_id = gs2.server_id WHERE gs.server_status = 'online' GROUP BY gs.server_id, gs.server_name, gs.server_status, creation_month ORDER BY creation_month DESC, stat_count DESC"
+},
+{
+"db": "genomic_expression_data_analysis_493598",
+"dialect": "Oracle",
+"difficulty": "Hard",
+"query_id": 5,
+"sql": "SELECT DISTINCT p.\"project_id\", p.\"project_name\", p.\"status\", DECODE(INSTR(p.\"description\", 'Breast'), 0, 'other', 'breast_cancer') AS \"project_category\" FROM \"projects\" p WHERE EXISTS (SELECT 1 FROM \"collaborations\" c INNER JOIN \"users\" u ON c.\"user_id\" = u.\"user_id\" WHERE c.\"project_id\" = p.\"project_id\" AND REGEXP_INSTR(u.\"email\", '^[a-z]+\\.\\w+@', 1, 1, 0, 'i') > 0) AND p.\"start_date\" >= TO_DATE('2024-01-01', 'YYYY-MM-DD') ORDER BY p.\"project_name\" FETCH FIRST 10 ROWS ONLY"
+},
+{
+"db": "genomic_expression_data_analysis_493598",
+"dialect": "Oracle",
+"difficulty": "Extra",
+"query_id": 3,
+"sql": "WITH project_stats AS (SELECT p.\"project_id\", p.\"project_name\", COUNT(DISTINCT d.\"dataset_id\") AS \"dataset_count\", MAX(d.\"upload_date\") AS \"latest_upload\", COUNT(DISTINCT res.\"gene_id\") AS \"unique_genes\", TRUNC(AVG(res.\"effect_size\"), 4) AS \"avg_effect_size\" FROM \"projects\" p LEFT OUTER JOIN \"collaborations\" c ON p.\"project_id\" = c.\"project_id\" LEFT OUTER JOIN \"datasets\" d ON c.\"user_id\" = d.\"user_id\" LEFT OUTER JOIN \"analyses\" a ON d.\"dataset_id\" = a.\"dataset_id\" LEFT OUTER JOIN \"results\" res ON a.\"analysis_id\" = res.\"analysis_id\" GROUP BY p.\"project_id\", p.\"project_name\"), project_ranked AS (SELECT ps.*, RANK() OVER (ORDER BY ps.\"dataset_count\" DESC, ps.\"avg_effect_size\" DESC) AS \"project_rank\" FROM project_stats ps WHERE ps.\"dataset_count\" > 0) SELECT pr.\"project_name\", pr.\"dataset_count\", pr.\"unique_genes\", pr.\"avg_effect_size\", TO_CHAR(pr.\"latest_upload\", 'Day, Month DD, YYYY HH12:MI AM') AS \"formatted_upload\", STATS_MODE(g.\"length\") AS \"common_gene_length\" FROM project_ranked pr INNER JOIN \"genes\" g ON 1=1 WHERE pr.\"project_rank\" <= 5 GROUP BY pr.\"project_name\", pr.\"dataset_count\", pr.\"unique_genes\", pr.\"avg_effect_size\", pr.\"latest_upload\", pr.\"project_rank\" ORDER BY pr.\"project_rank\""
+},
+{
+"db": "geographic_and_demographic_data_management_922384",
+"dialect": "Oracle",
+"difficulty": "Easy",
+"query_id": 2,
+"sql": "SELECT \"neighborhood_name\", \"density\" FROM (SELECT n.\"neighborhood_name\", d.\"density\" FROM \"neighborhoods\" n JOIN \"demographics\" d ON n.\"neighborhood_id\" = d.\"neighborhood_id\" ORDER BY d.\"density\" DESC) WHERE ROWNUM <= 3"
+},
+{
+"db": "geographic_and_demographic_data_management_922384",
+"dialect": "Oracle",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT \"b\".\"borough_name\", \"n\".\"neighborhood_name\", \"d\".\"population\", \"d\".\"density\", TO_CHAR(\"n\".\"created_at\", 'YYYY-MM') AS \"creation_month\", NVL(\"u\".\"land_use\", 'Not Specified') AS \"land_use_type\" FROM \"boroughs\" \"b\" INNER JOIN \"postcodes\" \"p\" ON \"b\".\"borough_id\" = \"p\".\"borough_id\" INNER JOIN \"neighborhoods\" \"n\" ON \"p\".\"postcode_id\" = \"n\".\"postcode_id\" INNER JOIN \"demographics\" \"d\" ON \"n\".\"neighborhood_id\" = \"d\".\"neighborhood_id\" LEFT JOIN \"urban_planning\" \"u\" ON \"n\".\"neighborhood_id\" = \"u\".\"neighborhood_id\" WHERE \"d\".\"density\" > 8000 AND \"n\".\"neighborhood_name\" IN (SELECT \"nh\".\"neighborhood_name\" FROM \"neighborhoods\" \"nh\" WHERE \"nh\".\"boundary\" LIKE '%POLYGON%') ORDER BY \"d\".\"density\" DESC"
+},
+{
+"db": "global_climate_and_weather_data_monitoring",
+"dialect": "MySQL",
+"difficulty": "Hard",
+"query_id": 2,
+"sql": "SELECT cr.report_name,        DATE_FORMAT(cr.creation_date, '%W, %M %d, %Y') AS formatted_date,        cr.download_count,        cr.public_access FROM climate_reports cr WHERE (DAYOFWEEK(cr.creation_date) = 1 XOR DAYOFWEEK(cr.creation_date) = 7) AND cr.public_access = 1 ORDER BY cr.download_count DESC"
+},
+{
+"db": "global_climate_and_weather_data_monitoring",
+"dialect": "MySQL",
+"difficulty": "Extra",
+"query_id": 2,
+"sql": "WITH formatted_access AS (  SELECT ua.access_id, ua.researcher_id,          DATE_FORMAT(STR_TO_DATE(ua.access_date, '%Y-%m-%dT%H:%i:%s'), '%W, %M %d, %Y %h:%i %p') AS formatted_access_time,          CONVERT(ua.device_info USING utf8mb4) AS decoded_device,          CURTIME() AS query_time,          LENGTH(ua.ip_address) AS ip_byte_length   FROM user_access ua   WHERE ua.access_date IS NOT NULL), access_ranked AS (  SELECT fa.*, r.first_name, r.last_name,          RANK() OVER (PARTITION BY DATE_FORMAT(STR_TO_DATE(fa.formatted_access_time, '%W, %M %d, %Y %h:%i %p'), '%Y-%m') ORDER BY fa.access_id) AS monthly_access_rank   FROM formatted_access fa   INNER JOIN climate_researchers r ON fa.researcher_id = r.researcher_id) SELECT ar.first_name, ar.last_name, ar.formatted_access_time, ar.decoded_device, ar.query_time, ar.ip_byte_length, ar.monthly_access_rank FROM access_ranked ar WHERE ar.monthly_access_rank <= 2 ORDER BY ar.formatted_access_time DESC"
+},
+{
+"db": "global_economic_and_demographic_data",
+"dialect": "MySQL",
+"difficulty": "Easy",
+"query_id": 1,
+"sql": "SELECT user_name, role, IFNULL(last_login, '1970-01-01 00:00:00') AS last_login_clean FROM users ORDER BY user_id LIMIT 3"
+},
+{
+"db": "global_economic_and_demographic_data",
+"dialect": "MySQL",
+"difficulty": "Medium",
+"query_id": 4,
+"sql": "SELECT user_id, user_name, GROUP_CONCAT(CONCAT(department, ', ', position) ORDER BY department SEPARATOR '; ') AS dept_position FROM users GROUP BY user_id, user_name ORDER BY user_id"
+},
+{
+"db": "global_happiness_index_and_socioeconomic_analysis",
+"dialect": "Oracle",
+"difficulty": "Hard",
+"query_id": 4,
+"sql": "SELECT \"hi\".\"country\", DECODE(\"hi\".\"happiness_rank\", 1, 'Top', 2, 'High', 3, 'Medium', 'Low') AS \"rank_category\", TO_CHAR(\"hi\".\"last_updated\", 'YYYY') AS \"update_year\" FROM \"happiness_index\" \"hi\" WHERE \"hi\".\"index_id\" IN (SELECT \"index_id\" FROM \"economic_factors\" WHERE \"gdp_per_capita\" > (SELECT AVG(\"gdp_per_capita\") FROM \"economic_factors\"))"
+},
+{
+"db": "global_happiness_index_and_socioeconomic_analysis",
+"dialect": "Oracle",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH \"regional_stats\" AS (SELECT \"h\".\"region\", \"h\".\"year\", AVG(\"h\".\"happiness_score\") AS \"avg_score\", COUNT(*) AS \"country_count\", GREATEST(AVG(\"h\".\"happiness_score\"), STDDEV(\"h\".\"happiness_score\"), NULL) AS \"robust_avg_score\" FROM \"happiness_index\" \"h\" GROUP BY \"h\".\"region\", \"h\".\"year\"), \"ranked_regions\" AS (SELECT \"rs\".*, RANK() OVER (PARTITION BY \"rs\".\"year\" ORDER BY \"rs\".\"avg_score\" DESC) AS \"yearly_rank\", TO_CHAR(TO_DATE(\"rs\".\"year\" || '-01-01', 'YYYY-MM-DD'), 'Day, Month DD, YYYY HH12:MI AM') AS \"formatted_date\" FROM \"regional_stats\" \"rs\") SELECT \"rr\".\"region\", \"rr\".\"year\", \"rr\".\"formatted_date\", \"rr\".\"avg_score\", \"rr\".\"robust_avg_score\", \"rr\".\"yearly_rank\", LISTAGG(\"rr\".\"region\", ', ') WITHIN GROUP (ORDER BY \"rr\".\"yearly_rank\") AS \"region_ranking\" FROM \"ranked_regions\" \"rr\" WHERE \"rr\".\"yearly_rank\" <= 3 GROUP BY \"rr\".\"region\", \"rr\".\"year\", \"rr\".\"formatted_date\", \"rr\".\"avg_score\", \"rr\".\"robust_avg_score\", \"rr\".\"yearly_rank\" ORDER BY \"rr\".\"year\" DESC, \"rr\".\"yearly_rank\""
+},
+{
+"db": "golf_course_score_tracking",
+"dialect": "PostgreSQL",
+"difficulty": "Easy",
+"query_id": 2,
+"sql": "SELECT course_name, CASE WHEN COALESCE(green_fee, 0) = 0 THEN 'Free' ELSE green_fee::text END AS fee_display FROM courses ORDER BY course_name"
+},
+{
+"db": "golf_course_score_tracking",
+"dialect": "PostgreSQL",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT c.course_name, c.location, COALESCE(COUNT(e.event_id), 0) AS event_count, STRING_AGG(e.event_name, ', ' ORDER BY e.start_date) AS event_names FROM courses c LEFT JOIN events e ON c.course_id = e.course_id GROUP BY c.course_id, c.course_name, c.location ORDER BY event_count DESC"
+},
+{
+"db": "healthcare_and_social_services_support_needs_assessment",
+"dialect": "MySQL",
+"difficulty": "Hard",
+"query_id": 1,
+"sql": "SELECT p.patient_id, p.patient_name, GROUP_CONCAT(a.assessment_type SEPARATOR ' | ') AS assessment_types, ha.pre_injury_need, ha.post_injury_need, (ha.post_injury_need - ha.pre_injury_need) AS need_increase, 'Need increase detected' AS alert FROM patients p INNER JOIN assessments a ON p.patient_id = a.patient_id INNER JOIN home_assistance ha ON a.assessment_id = ha.assessment_id WHERE (ha.post_injury_need - ha.pre_injury_need) >= 2 AND ha.pre_injury_need >= 1 AND ha.post_injury_need <= 4 GROUP BY p.patient_id, p.patient_name, ha.pre_injury_need, ha.post_injury_need ORDER BY need_increase DESC"
+},
+{
+"db": "healthcare_and_social_services_support_needs_assessment",
+"dialect": "MySQL",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH assessment_timeline AS (  SELECT a.assessment_id, a.patient_id, a.assessment_date,          DATE_FORMAT(a.assessment_date, '%W, %M %d, %Y %h:%i %p') AS full_format_date,          YEAR(a.assessment_date) AS assessment_year,          RANK() OVER (PARTITION BY YEAR(a.assessment_date) ORDER BY a.assessment_date DESC) AS yearly_rank   FROM assessments a   WHERE a.assessment_date >= '2023-01-01'), ranked AS (  SELECT at.*, p.patient_name, p.gender   FROM assessment_timeline at   INNER JOIN patients p ON at.patient_id = p.patient_id) SELECT assessment_year,        GROUP_CONCAT(patient_name ORDER BY yearly_rank SEPARATOR ', ') AS top_patients,        CONCAT(_UTF8'Year: ', assessment_year) AS year_label,        COUNT(*) AS total_assessments FROM ranked WHERE yearly_rank <= 2 GROUP BY assessment_year ORDER BY assessment_year DESC"
+},
+{
+"db": "healthcare_improvement_tracking_and_outcomes_analysis",
+"dialect": "PostgreSQL",
+"difficulty": "Easy",
+"query_id": 1,
+"sql": "SELECT patient_id, first_name, last_name FROM patients TABLESAMPLE SYSTEM (20) REPEATABLE (42)"
+},
+{
+"db": "healthcare_improvement_tracking_and_outcomes_analysis",
+"dialect": "PostgreSQL",
+"difficulty": "Medium",
+"query_id": 2,
+"sql": "SELECT p.first_name, p.last_name, COALESCE(pf.feedback_rating::text, 'No feedback') AS rating_display FROM patients p LEFT JOIN patient_feedback pf ON p.patient_id = pf.patient_id WHERE p.medical_history ~ 'Diabetes' ORDER BY p.last_name"
+},
+{
+"db": "healthcare_process_management_and_analytics",
+"dialect": "PostgreSQL",
+"difficulty": "Hard",
+"query_id": 1,
+"sql": "SELECT r.resource_name, r.specialization, AVG(a.duration) AS avg_duration, COUNT(*) FILTER (WHERE a.status = 'completed') AS completed_count, TO_CHAR(AVG(a.complete_time - a.start_time), 'HH24:MI:SS') AS avg_elapsed_time FROM resources r INNER JOIN activities a ON r.resource_id = a.resource_id INNER JOIN activity_types at ON a.activity_type_id = at.activity_type_id WHERE r.resource_type = 'doctor' GROUP BY r.resource_id, r.resource_name, r.specialization ORDER BY avg_duration DESC NULLS LAST LIMIT 5"
+},
+{
+"db": "healthcare_process_management_and_analytics",
+"dialect": "PostgreSQL",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH months AS (\n  SELECT generate_series(\n    DATE_TRUNC('year', CURRENT_DATE)::DATE,\n    (DATE_TRUNC('year', CURRENT_DATE) + INTERVAL '11 months')::DATE,\n    '1 month'\n  )::DATE AS month_start,\n  TO_CHAR(generate_series(\n    DATE_TRUNC('year', CURRENT_DATE)::DATE,\n    (DATE_TRUNC('year', CURRENT_DATE) + INTERVAL '11 months')::DATE,\n    '1 month'\n  ), 'Month DD, YYYY HH24:MI') AS month_label\n),\nmonthly_activity AS (\n  SELECT\n    DATE_TRUNC('month', a.start_time)::DATE AS activity_month,\n    r.department,\n    COUNT(*) AS total_activities,\n    COUNT(*) FILTER (WHERE a.status = 'completed') AS completed_count,\n    AVG(a.duration) FILTER (WHERE a.weight > 3) AS avg_weighted_duration,\n    LENGTH(STRING_AGG(a.notes, ' ' ORDER BY a.start_time)) AS total_notes_length\n  FROM activities a\n  INNER JOIN resources r ON a.resource_id = r.resource_id\n  WHERE a.start_time >= DATE_TRUNC('year', CURRENT_DATE)::DATE\n    AND a.start_time < (DATE_TRUNC('year', CURRENT_DATE) + INTERVAL '1 year')::DATE\n  GROUP BY activity_month, r.department\n)\nSELECT\n  m.month_label,\n  ma.department,\n  COALESCE(ma.total_activities, 0) AS total_activities,\n  COALESCE(ma.completed_count, 0)::INTEGER AS completed_count,\n  COALESCE(ma.avg_weighted_duration, 0.0)::NUMERIC(10,2) AS avg_weighted_duration,\n  COALESCE(ma.total_notes_length, 0) AS total_notes_length\nFROM months m\nLEFT JOIN monthly_activity ma ON ma.activity_month = m.month_start\nORDER BY m.month_start, ma.department"
+},
+{
+"db": "international_trade_tariff_and_tax_data_management",
+"dialect": "PostgreSQL",
+"difficulty": "Easy",
+"query_id": 4,
+"sql": "SELECT hscode, description, additional_notes FROM commodities WHERE additional_notes ILIKE '%tariff%'"
+},
+{
+"db": "international_trade_tariff_and_tax_data_management",
+"dialect": "PostgreSQL",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT TO_CHAR(t.transaction_date, 'YYYY-MM') AS month, t.transaction_id, t.total_value FROM trade_transactions t WHERE t.transaction_type = 'Import' AND t.status = 'Completed' ORDER BY month, t.transaction_date"
+},
+{
+"db": "java_collections_framework_and_concurrent_collections_overview",
+"dialect": "MySQL",
+"difficulty": "Hard",
+"query_id": 5,
+"sql": "SELECT c.collection_id, c.class_name, c.created_at, DATE_FORMAT(c.created_at, '%S') AS seconds_fmss, sub.usage_count FROM collections c LEFT JOIN (SELECT cu.collection_id, COUNT(*) AS usage_count, ROW_NUMBER() OVER (ORDER BY COUNT(*) DESC) AS rn FROM collection_usage cu GROUP BY cu.collection_id) sub ON c.collection_id = sub.collection_id WHERE sub.rn <= 3 OR sub.rn IS NULL ORDER BY sub.usage_count DESC"
+},
+{
+"db": "java_collections_framework_and_concurrent_collections_overview",
+"dialect": "MySQL",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH collection_time_analysis AS (SELECT c.collection_id, c.class_name, c.created_at, MAKETIME(10, 30, 45) AS default_time, GREATEST(c.size_limit, 0, NULL) AS effective_limit, CEIL(COALESCE(LENGTH(c.class_name), 10) / 3.0) AS name_segment_count FROM collections c), segment_data AS (SELECT cta.collection_id, cta.class_name, SUBSTRING(cta.class_name, 2, cta.name_segment_count) AS segment, cta.default_time, cta.effective_limit FROM collection_time_analysis cta WHERE cta.effective_limit IS NULL OR cta.effective_limit = 0) SELECT sd.class_name, sd.segment, sd.default_time, COUNT(DISTINCT cu.module_name) AS module_count FROM segment_data sd LEFT JOIN collection_usage cu ON sd.collection_id = cu.collection_id GROUP BY sd.class_name, sd.segment, sd.default_time HAVING COUNT(DISTINCT cu.module_name) > 0 ORDER BY sd.class_name"
+},
+{
+"db": "jewelry_sizing_and_measurement_data",
+"dialect": "Oracle",
+"difficulty": "Easy",
+"query_id": 1,
+"sql": "SELECT * FROM (SELECT \"size_id\", \"finger_circumference_mm\", \"ring_diameter_mm\", \"eu_size\" FROM \"ring_sizes\" WHERE \"eu_size\" > 55 ORDER BY \"finger_circumference_mm\" DESC) WHERE ROWNUM <= 3"
+},
+{
+"db": "jewelry_sizing_and_measurement_data",
+"dialect": "Oracle",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT \"c\".\"first_name\", \"c\".\"last_name\", TO_CHAR(\"o\".\"order_date\", 'YYYY-MM') AS \"order_month\", \"o\".\"total_amount\", (SYSDATE - \"o\".\"order_date\") AS \"days_since_order\" FROM \"customers\" \"c\" INNER JOIN \"orders\" \"o\" ON \"c\".\"customer_id\" = \"o\".\"customer_id\" WHERE \"o\".\"total_amount\" > (SELECT AVG(\"o2\".\"total_amount\") FROM \"orders\" \"o2\") ORDER BY \"o\".\"order_date\" DESC"
+},
+{
+"db": "job_market_and_recruitment_analytics",
+"dialect": "MySQL",
+"difficulty": "Hard",
+"query_id": 1,
+"sql": "SELECT j.job_id, j.job_title, DATE_FORMAT(j.posted_date, '%Y-%m') AS posting_month, j.views, CAST(AVG(j.views) OVER (PARTITION BY DATE_FORMAT(j.posted_date, '%Y-%m')) AS SIGNED) AS avg_monthly_views, SUM(j.views) OVER (PARTITION BY j.company_id ORDER BY j.posted_date) AS running_company_views FROM jobs j WHERE j.is_active = 1 ORDER BY j.posted_date"
+},
+{
+"db": "job_market_and_recruitment_analytics",
+"dialect": "MySQL",
+"difficulty": "Extra",
+"query_id": 2,
+"sql": "WITH weekday_stats AS (SELECT DATE_FORMAT(j.posted_date, '%W') AS weekday_name, DATE_FORMAT(j.posted_date, '%Y-%m-%d') AS post_day, COUNT(*) AS post_count, RANK() OVER (PARTITION BY DATE_FORMAT(j.posted_date, '%W') ORDER BY COUNT(*) DESC) AS day_rank FROM jobs j WHERE j.posted_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH) GROUP BY weekday_name, post_day UNION ALL SELECT 'Total' AS weekday_name, NULL AS post_day, COUNT(*) AS post_count, 1 AS day_rank FROM jobs j WHERE j.posted_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)), ranked_days AS (SELECT ws.*, CASE WHEN ws.weekday_name = 'Monday' THEN 1 WHEN ws.weekday_name = 'Tuesday' THEN 2 WHEN ws.weekday_name = 'Wednesday' THEN 3 WHEN ws.weekday_name = 'Thursday' THEN 4 WHEN ws.weekday_name = 'Friday' THEN 5 WHEN ws.weekday_name = 'Saturday' THEN 6 WHEN ws.weekday_name = 'Sunday' THEN 7 ELSE 8 END AS day_order FROM weekday_stats ws) SELECT rd.weekday_name, rd.post_day, rd.post_count, rd.day_rank FROM ranked_days rd WHERE rd.day_rank <= 3 ORDER BY rd.day_order, rd.post_count DESC"
+},
+{
+"db": "league_of_legends_match_data_analysis",
+"dialect": "PostgreSQL",
+"difficulty": "Easy",
+"query_id": 1,
+"sql": "SELECT m.match_date, m.match_duration, b.kills FROM matches m JOIN blue_team_statistics b ON m.match_id = b.match_id WHERE b.kills > 15 ORDER BY m.match_date"
+},
+{
+"db": "league_of_legends_match_data_analysis",
+"dialect": "PostgreSQL",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT t.tournament_name, TO_CHAR(m.match_date::timestamp, 'YYYY-MM') AS match_month, COUNT(*) AS total_matches FROM matches m INNER JOIN tournaments t ON m.tournament_id = t.tournament_id WHERE m.match_type IN (SELECT DISTINCT match_type FROM matches WHERE match_type = 'regular') GROUP BY t.tournament_name, match_month ORDER BY t.tournament_name, match_month"
+},
+{
+"db": "manufacturing_components_and_specifications",
+"dialect": "PostgreSQL",
+"difficulty": "Hard",
+"query_id": 2,
+"sql": "SELECT c.part_no, TRIM(LEADING ' ' FROM c.material) AS trimmed_material, c.id_depth::TEXT AS id_depth_text, c.id_tap, (SELECT COUNT(*) FROM orders o WHERE o.part_no = c.part_no AND o.status = 'pending') AS pending_orders FROM components c WHERE c.id_depth IS NOT NULL AND c.id_tap IS NOT NULL ORDER BY c.id_depth ASC NULLS LAST"
+},
+{
+"db": "manufacturing_components_and_specifications",
+"dialect": "PostgreSQL",
+"difficulty": "Extra",
+"query_id": 2,
+"sql": "WITH months AS ( SELECT gs::DATE AS month_start, TO_CHAR(gs, 'Month YYYY') AS month_label FROM generate_series( DATE_TRUNC('year', CURRENT_DATE)::DATE, (DATE_TRUNC('year', CURRENT_DATE) + INTERVAL '11 months')::DATE, INTERVAL '1 month' ) AS gs ), monthly_orders AS ( SELECT DATE_TRUNC('month', o.order_date::DATE)::DATE AS order_month, o.part_no, COUNT(*) AS order_count, SUM(o.quantity_ordered) AS total_ordered, COUNT(*) FILTER (WHERE o.status = 'pending') AS pending_count, SUM(o.quantity_ordered) FILTER (WHERE o.status = 'confirmed') AS confirmed_qty FROM orders o GROUP BY order_month, o.part_no ) SELECT m.month_label, mo.part_no, COALESCE(mo.order_count, 0) AS order_count, COALESCE(mo.total_ordered, 0) AS total_ordered, COALESCE(mo.pending_count, 0)::INTEGER AS pending_orders, COALESCE(mo.confirmed_qty, 0) AS confirmed_quantity, TO_CHAR(m.month_start, 'Day, DD Month YYYY') AS full_date FROM months m LEFT JOIN monthly_orders mo ON mo.order_month = m.month_start ORDER BY m.month_start, mo.part_no"
+},
+{
+"db": "material_specifications_and_compliance_tracking",
+"dialect": "PostgreSQL",
+"difficulty": "Easy",
+"query_id": 3,
+"sql": "SELECT first_name || ' ' || last_name AS full_name, email FROM users WHERE email ILIKE '%@EXAMPLE.COM'"
+},
+{
+"db": "material_specifications_and_compliance_tracking",
+"dialect": "PostgreSQL",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT TO_CHAR(cr.check_date, 'YYYY-MM') AS month, COUNT(*) AS compliant_count FROM compliance_records cr WHERE cr.compliance_status = 'Compliant' GROUP BY month ORDER BY month"
+},
+{
+"db": "ml_model_eval_and_perf_tracking_895401",
+"dialect": "Oracle",
+"difficulty": "Hard",
+"query_id": 2,
+"sql": "SELECT \"m\".\"model_name\", \"e\".\"evaluation_id\", DECODE(SIGN(\"e\".\"score\" - 0.8), 1, 'high', -1, 'low', 'medium') AS \"score_category\", REGEXP_SUBSTR(\"m\".\"description\", '[^ ]+', 1, 1) AS \"first_word\" FROM \"models\" \"m\" INNER JOIN \"evaluations\" \"e\" ON \"m\".\"model_id\" = \"e\".\"model_id\" WHERE \"e\".\"evaluation_id\" IN (SELECT \"e2\".\"evaluation_id\" FROM \"evaluations\" \"e2\" WHERE \"e2\".\"score\" > 0.7) ORDER BY \"e\".\"score\" DESC"
+},
+{
+"db": "ml_model_eval_and_perf_tracking_895401",
+"dialect": "Oracle",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH \"eval_stats\" AS (\n  SELECT \"e\".\"model_id\",\n         \"m\".\"model_name\",\n         \"m\".\"model_type\",\n         COUNT(DISTINCT \"e\".\"evaluation_id\") AS \"eval_count\",\n         ROUND(AVG(\"e\".\"score\"), 4) AS \"avg_score\",\n         ROUND(AVG(\"e\".\"awareness\"), 4) AS \"avg_awareness\",\n         ROUND(LN(AVG(\"e\".\"score\")), 4) AS \"log_avg_score\",\n         TO_CHAR(MIN(\"e\".\"created_at\"), 'YYYY-MM-DD HH24:MI:SS') AS \"first_eval_date\",\n         GREATEST(AVG(\"e\".\"score\"), AVG(\"e\".\"confidence\"), NULL) AS \"best_metric\"\n  FROM \"evaluations\" \"e\"\n  INNER JOIN \"models\" \"m\" ON \"e\".\"model_id\" = \"m\".\"model_id\"\n  WHERE \"e\".\"status\" = 'completed'\n  GROUP BY \"e\".\"model_id\", \"m\".\"model_name\", \"m\".\"model_type\"\n), \"ranked\" AS (\n  SELECT \"es\".*,\n         RANK() OVER (ORDER BY \"es\".\"avg_score\" DESC) AS \"score_rank\",\n         CASE WHEN \"es\".\"best_metric\" > 0.85 THEN 'top_performer'\n              WHEN \"es\".\"best_metric\" > 0.7 THEN 'good_performer'\n              ELSE 'needs_improvement'\n         END AS \"performance_category\"\n  FROM \"eval_stats\" \"es\"\n)\nSELECT \"r\".\"model_name\", \"r\".\"model_type\", \"r\".\"avg_score\",\n       \"r\".\"log_avg_score\", \"r\".\"first_eval_date\",\n       \"r\".\"best_metric\", \"r\".\"score_rank\",\n       \"r\".\"performance_category\"\nFROM \"ranked\" \"r\"\nWHERE \"r\".\"score_rank\" <= 10\nORDER BY \"r\".\"score_rank\""
+},
+{
+"db": "municipal_meeting_management_and_recording_system",
+"dialect": "MySQL",
+"difficulty": "Easy",
+"query_id": 1,
+"sql": "SELECT name, DATE_FORMAT(date, '%Y-%m-%d') AS meeting_date FROM meetings WHERE public_access = 1"
+},
+{
+"db": "municipal_meeting_management_and_recording_system",
+"dialect": "MySQL",
+"difficulty": "Medium",
+"query_id": 2,
+"sql": "SELECT m.name AS meeting_name, GROUP_CONCAT(DISTINCT t.tag_name ORDER BY t.tag_name SEPARATOR ', ') AS tags, IFNULL(t.description, 'No description') AS tag_description FROM meetings m INNER JOIN meeting_tags mt ON m.meeting_id = mt.meeting_id INNER JOIN tags t ON mt.tag_id = t.tag_id WHERE m.public_access = 1 GROUP BY m.meeting_id, m.name, t.description ORDER BY m.name"
+},
+{
+"db": "nba_game_statistics_and_team_performance_analysis",
+"dialect": "Oracle",
+"difficulty": "Hard",
+"query_id": 1,
+"sql": "SELECT \"game_id\", \"game_date\", \"home_team_id\", \"away_team_id\", \"attendance\", \"venue\", ROWNUM AS \"row_num\", TO_CHAR(\"game_date\", 'YYYY-MM-DD HH24:MI:SS') AS \"formatted_date\", \"final_score\", \"overtime\", \"game_status\" FROM ( SELECT \"g\".\"game_id\", \"g\".\"game_date\", \"g\".\"home_team_id\", \"g\".\"away_team_id\", \"g\".\"attendance\", \"g\".\"venue\", \"g\".\"final_score\", \"g\".\"overtime\", \"g\".\"game_status\" FROM \"games\" \"g\" WHERE \"g\".\"attendance\" > 18000 ORDER BY \"g\".\"game_date\" DESC ) WHERE ROWNUM <= 5"
+},
+{
+"db": "nba_game_statistics_and_team_performance_analysis",
+"dialect": "Oracle",
+"difficulty": "Extra",
+"query_id": 2,
+"sql": "WITH \"date_series\" AS (  SELECT TRUNC(SYSDATE) - LEVEL + 1 AS \"day_date\"  FROM DUAL  CONNECT BY LEVEL <= 30), \"game_attendance\" AS (  SELECT \"g\".\"game_date\", \"g\".\"attendance\",          LOG(2, \"g\".\"attendance\" + 1) AS \"log2_attendance\",          \"g\".\"home_team_id\"   FROM \"games\" \"g\"   WHERE \"g\".\"game_date\" >= TRUNC(SYSDATE) - 30 AND \"g\".\"game_date\" <= TRUNC(SYSDATE)), \"daily_stats\" AS (  SELECT \"ds\".\"day_date\",          COUNT(\"ga\".\"game_date\") AS \"game_count\",          CAST(SUM(\"ga\".\"attendance\") AS BINARY_DOUBLE) AS \"total_attendance_double\",          AVG(\"ga\".\"log2_attendance\") AS \"avg_log2_attendance\",          MAX(\"ga\".\"attendance\") AS \"max_attendance\",          MIN(\"ga\".\"attendance\") AS \"min_attendance\"   FROM \"date_series\" \"ds\"   LEFT JOIN \"game_attendance\" \"ga\" ON TRUNC(\"ga\".\"game_date\") = \"ds\".\"day_date\"   GROUP BY \"ds\".\"day_date\") SELECT \"day_date\", \"game_count\", \"total_attendance_double\", \"avg_log2_attendance\", \"max_attendance\", \"min_attendance\", CASE WHEN \"game_count\" > 0 THEN 'has_games' ELSE 'no_games' END AS \"game_status_flag\", GREATEST(\"max_attendance\", \"min_attendance\", NULL) AS \"greatest_attendance\" FROM \"daily_stats\" ORDER BY \"day_date\" DESC"
+},
+{
+"db": "news_article_management_system",
+"dialect": "MySQL",
+"difficulty": "Easy",
+"query_id": 2,
+"sql": "SELECT `comment_id`, `article_id`, `likes`, `comment_text` FROM `comments` WHERE `likes` > 0 ORDER BY `likes` DESC FOR UPDATE"
+},
+{
+"db": "news_article_management_system",
+"dialect": "MySQL",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT DATE_FORMAT(c.comment_date, '%Y-%m') AS comment_month,        cat.category_name,        COUNT(c.comment_id) AS total_comments FROM comments c INNER JOIN article_categories ac ON c.article_id = ac.article_id INNER JOIN categories cat ON ac.category_id = cat.category_id WHERE cat.is_active = 1 GROUP BY comment_month, cat.category_id, cat.category_name HAVING total_comments > 0 ORDER BY comment_month, total_comments DESC"
+},
+{
+"db": "presidential_election_polling_data",
+"dialect": "MySQL",
+"difficulty": "Hard",
+"query_id": 1,
+"sql": "SELECT pst.pollster_name, d.poll_description, GROUP_CONCAT(d.tag_name SEPARATOR '; ') AS tags FROM (SELECT p.poll_id, p.poll_description, pt.tag_name FROM polls p LEFT JOIN poll_tags pt ON p.poll_id = pt.poll_id WHERE p.sample_size > 1000) AS d JOIN pollsters pst ON pst.pollster_id = (SELECT pollster_id FROM polls WHERE poll_id = d.poll_id) GROUP BY pst.pollster_name, d.poll_description HAVING COUNT(d.tag_name) > 0 ORDER BY pst.pollster_name"
+},
+{
+"db": "presidential_election_polling_data",
+"dialect": "MySQL",
+"difficulty": "Extra",
+"query_id": 3,
+"sql": "WITH pollster_efficiency AS (  SELECT ps.pollster_id, ps.pollster_name,          LOG(ps.pollster_reputation_score / 2) AS efficiency_log,          DATE_FORMAT(STR_TO_DATE(p.middate_time, '%Y-%m-%d %H:%i:%s'), '%W, %M %d, %Y') AS poll_date,          COUNT(p.poll_id) AS poll_count,          AVG(p.sample_size) AS avg_sample_size   FROM pollsters ps   INNER JOIN polls p ON ps.pollster_id = p.pollster_id   WHERE p.poll_status = 'Completed'   AND p.sample_size > 1000   GROUP BY ps.pollster_id, ps.pollster_name, efficiency_log, poll_date), ranked AS (  SELECT pe.*,          RANK() OVER (PARTITION BY pe.pollster_name ORDER BY pe.poll_count DESC) AS efficiency_rank   FROM pollster_efficiency pe) SELECT r.pollster_name, r.poll_date, r.poll_count, r.avg_sample_size, r.efficiency_log,        GROUP_CONCAT(r.pollster_name ORDER BY r.efficiency_rank SEPARATOR ' | ') AS pollster_list FROM ranked r WHERE r.efficiency_rank <= 2 GROUP BY r.pollster_name, r.poll_date, r.poll_count, r.avg_sample_size, r.efficiency_log ORDER BY r.efficiency_log DESC"
+},
+{
+"db": "project_management_and_milestone_tracking_152856",
+"dialect": "MySQL",
+"difficulty": "Easy",
+"query_id": 1,
+"sql": "SELECT project_name, status, start_date FROM projects ORDER BY start_date ASC LIMIT 3"
+},
+{
+"db": "project_management_and_milestone_tracking_152856",
+"dialect": "MySQL",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT p.project_id, p.project_name, COUNT(m.milestone_id) AS milestone_count, GROUP_CONCAT(m.milestone_number ORDER BY m.milestone_number SEPARATOR ', ') AS milestone_numbers FROM projects p INNER JOIN milestones m ON p.project_id = m.project_id WHERE p.status = 'active' GROUP BY p.project_id, p.project_name HAVING COUNT(m.milestone_id) >= 1 ORDER BY milestone_count DESC"
+},
+{
+"db": "real_estate_and_urban_development_analysis",
+"dialect": "Oracle",
+"difficulty": "Hard",
+"query_id": 2,
+"sql": "SELECT \"tr\".\"neighborhood_id\", DECODE(\"tr\".\"prop_tax_exempt\", 1, 'Yes', 'No') AS \"is_exempt\", REGEXP_SUBSTR(\"tr\".\"tax_incentives\", '[^ ]+', 1, 1) AS \"first_incentive_word\", AVG(\"tr\".\"tax_rate\") AS \"avg_tax_rate\" FROM \"tax_rates\" \"tr\" WHERE \"tr\".\"tax_incentives\" IS NOT NULL GROUP BY \"tr\".\"neighborhood_id\", \"tr\".\"prop_tax_exempt\", REGEXP_SUBSTR(\"tr\".\"tax_incentives\", '[^ ]+', 1, 1) HAVING COUNT(*) > 0 ORDER BY \"avg_tax_rate\" DESC"
+},
+{
+"db": "real_estate_and_urban_development_analysis",
+"dialect": "Oracle",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH base_stats AS (\n  SELECT n.\"neighborhood_id\", n.\"name\", n.\"region\", n.\"population\", n.\"area_sq_mi\",\n         LN(n.\"population\" / n.\"area_sq_mi\") AS log_pop_density,\n         ROUND(n.\"median_income\" / 12, 2) AS monthly_income,\n         GREATEST(n.\"median_house_value\", (SELECT AVG(r.\"median_house_price\") FROM \"real_estate_data\" r WHERE r.\"neighborhood_id\" = n.\"neighborhood_id\"), NULL) AS effective_home_value\n  FROM \"neighborhoods\" n\n),\nranked AS (\n  SELECT b.\"neighborhood_id\", b.\"name\", b.\"region\", b.\"population\", b.\"area_sq_mi\",\n         b.log_pop_density,\n         b.monthly_income,\n         b.effective_home_value,\n         DECODE(SIGN(b.effective_home_value - 700000), 1, 'High', 0, 'Medium', -1, 'Low') AS price_tier,\n         RANK() OVER (PARTITION BY b.\"region\" ORDER BY b.log_pop_density DESC) AS reg_rank\n  FROM base_stats b\n)\nSELECT r.\"region\", r.\"name\", r.log_pop_density, r.monthly_income, r.price_tier, r.reg_rank\nFROM ranked r\nWHERE r.reg_rank <= 3\nORDER BY r.\"region\", r.reg_rank"
+},
+{
+"db": "reinforcement_learning_experiment_results_936627",
+"dialect": "MySQL",
+"difficulty": "Easy",
+"query_id": "mysql_easy_1",
+"sql": "SELECT experiment_name, DATE_FORMAT(start_date, '%Y-%m-%d') AS formatted_start_date FROM experiments WHERE start_date >= '2023-01-01' AND start_date < '2024-01-01' AND status = 'active'"
+},
+{
+"db": "reinforcement_learning_experiment_results_936627",
+"dialect": "MySQL",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT e.experiment_name, DATE_FORMAT(e.start_date, '%Y-%m') AS start_month, IFNULL(e.notes, 'No notes') AS notes FROM experiments e WHERE e.status = 'active' ORDER BY start_month"
+},
+{
+"db": "religious_affiliation_trends_in_finland",
+"dialect": "Oracle",
+"difficulty": "Hard",
+"query_id": 1,
+"sql": "SELECT \"y\".\"year_name\", TO_NUMBER(REGEXP_SUBSTR(\"ra\".\"evangelical_lutheran\", '[0-9]+(\\.[0-9]+)?')) AS \"pct_evangelical\", NVL(TO_CHAR(ROUND( (TO_NUMBER(REGEXP_SUBSTR(\"ra\".\"evangelical_lutheran\", '[0-9]+(\\.[0-9]+)?')) - LAG(TO_NUMBER(REGEXP_SUBSTR(\"ra\".\"evangelical_lutheran\", '[0-9]+(\\.[0-9]+)?'))) OVER (ORDER BY \"y\".\"year_name\")) / LAG(TO_NUMBER(REGEXP_SUBSTR(\"ra\".\"evangelical_lutheran\", '[0-9]+(\\.[0-9]+)?'))) OVER (ORDER BY \"y\".\"year_name\") * 100, 2), '999.99'), 'N/A') AS \"pct_change\" FROM \"religious_affiliations\" \"ra\" INNER JOIN \"years\" \"y\" ON \"ra\".\"year\" = \"y\".\"year_id\" ORDER BY \"y\".\"year_name\""
+},
+{
+"db": "religious_affiliation_trends_in_finland",
+"dialect": "Oracle",
+"difficulty": "Easy",
+"query_id": 2,
+"sql": "SELECT \"user_name\", \"last_login\" FROM (SELECT \"user_name\", \"last_login\" FROM \"users\" ORDER BY \"last_login\" DESC) WHERE ROWNUM <= 3"
+},
+{
+"db": "retail_location_management_and_analysis",
+"dialect": "MySQL",
+"difficulty": "Extra",
+"query_id": 2,
+"sql": "WITH weekly_sales AS (\n  SELECT sd.location_id,\n         DATE_FORMAT(sd.date, '%W, %M %d, %Y') AS full_date,\n         sd.total_sales,\n         JSON_VALUE(r.content, '$.meta.tags[0]') AS first_tag,\n         IF(sd.total_sales > 1000, 'high', 'low') AS sales_category\n  FROM sales_data sd\n  INNER JOIN reports r ON sd.location_id = r.location_id\n  WHERE r.report_type = 'JSON Test'\n),\nlocation_summary AS (\n  SELECT ws.location_id, l.name,\n         GROUP_CONCAT(DISTINCT ws.first_tag ORDER BY ws.first_tag SEPARATOR ' | ') AS tags_used,\n         SUM(ws.total_sales) AS total_sales,\n         SUM(IF(ws.sales_category = 'high', 1, 0)) AS high_sales_count\n  FROM weekly_sales ws\n  INNER JOIN locations l ON ws.location_id = l.location_id\n  GROUP BY ws.location_id, l.name\n)\nSELECT name, tags_used, total_sales, high_sales_count\nFROM location_summary\nORDER BY total_sales DESC"
+},
+{
+"db": "retail_location_management_and_analysis",
+"dialect": "MySQL",
+"difficulty": "Medium",
+"query_id": 2,
+"sql": "SELECT l.name, DATE_FORMAT(s.date, '%Y-%m') AS month, SUM(s.total_sales) AS total_sales FROM locations l INNER JOIN sales_data s ON l.location_id = s.location_id INNER JOIN categories c ON l.category_id = c.category_id WHERE c.category_name = _UTF8'Bookstore' AND s.total_sales > 0 GROUP BY l.location_id, l.name, month ORDER BY month, total_sales DESC"
+},
+{
+"db": "retail_sales_and_environmental_data_analysis",
+"dialect": "PostgreSQL",
+"difficulty": "Hard",
+"query_id": 1,
+"sql": "SELECT s.store_name, s.store_city, TO_CHAR(s.store_open_date::timestamp, 'MM') AS open_month, s.store_nbr % 2 AS nbr_parity FROM stores s WHERE s.store_nbr % 2 = 0 AND TO_CHAR(s.store_open_date::timestamp, 'MM')::integer IN (SELECT GENERATE_SERIES(1, 12, 2)) ORDER BY s.store_nbr"
+},
+{
+"db": "retail_sales_and_environmental_data_analysis",
+"dialect": "PostgreSQL",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH date_parsed AS (\n  SELECT sd.*,\n         TO_CHAR(TO_DATE(sd.sale_date, 'YYYY-MM-DD'), 'MM') AS sale_month,\n         TO_CHAR(TO_DATE(sd.sale_date, 'YYYY-MM-DD'), 'Day') AS sale_day_name\n  FROM sales_data sd\n),\ndiscount_analysis AS (\n  SELECT dp.*,\n         LEAST(dp.total_discount, dp.sales * 0.5) AS capped_discount,\n         ROW_NUMBER() OVER (PARTITION BY dp.store_nbr, dp.sale_month ORDER BY dp.sales DESC) AS rank_in_store_month\n  FROM date_parsed dp\n  WHERE dp.return_flag = False\n),\nstore_ranked AS (\n  SELECT da.*,\n         AVG(da.sales) OVER (PARTITION BY da.store_nbr) AS avg_store_sales,\n         MAX(da.capped_discount) OVER (PARTITION BY da.family) AS max_family_capped_discount\n  FROM discount_analysis da\n)\nSELECT sr.store_nbr,\n       sr.family,\n       sr.sale_date,\n       sr.sales,\n       sr.capped_discount,\n       sr.avg_store_sales,\n       sr.max_family_capped_discount,\n       sr.rank_in_store_month,\n       CASE\n          WHEN sr.sale_day_name = 'Sunday' THEN 'Weekend'\n          WHEN sr.sale_day_name = 'Saturday' THEN 'Weekend'\n          ELSE 'Weekday'\n       END AS day_type,\n       sr.sale_month\nFROM store_ranked sr\nWHERE sr.rank_in_store_month <= 3\n  AND (EXTRACT(DOW FROM TO_DATE(sr.sale_date, 'YYYY-MM-DD'))::INTEGER % 2) = 0\nORDER BY sr.store_nbr, sr.rank_in_store_month"
+},
+{
+"db": "sales_order_management_and_inventory_tracking_983164",
+"dialect": "MySQL",
+"difficulty": "Easy",
+"query_id": 1,
+"sql": "SELECT customer_name, contact_email FROM customers WHERE contact_email LIKE '%@example.com' ORDER BY customer_id LIMIT 5"
+},
+{
+"db": "sales_order_management_and_inventory_tracking_983164",
+"dialect": "MySQL",
+"difficulty": "Medium",
+"query_id": 3,
+"sql": "SELECT DATE_FORMAT(o.order_date, '%Y-%m-01') AS order_month, COUNT(*) AS same_month_orders FROM orders o WHERE DATE_FORMAT(o.order_date, '%Y-%m-01') = DATE_FORMAT(o.stock_date, '%Y-%m-01') GROUP BY DATE_FORMAT(o.order_date, '%Y-%m-01') ORDER BY order_month"
+},
+{
+"db": "sensor_device_specifications_and_measurement_parameters",
+"dialect": "Oracle",
+"difficulty": "Hard",
+"query_id": 5,
+"sql": "SELECT \"c\".\"condition_name\", \"ct\".\"type_name\", VARIANCE(\"m\".\"value\") AS \"value_variance\", AVG(\"m\".\"value\") AS \"mean_value\", DECODE(SIGN(AVG(\"m\".\"value\") - 50), 1, 'High Mean', -1, 'Low Mean', 'Mid Mean') AS \"mean_category\", COUNT(DISTINCT \"m\".\"device_id\") AS \"device_count\" FROM \"conditions\" \"c\" INNER JOIN \"condition_types\" \"ct\" ON \"c\".\"type_id\" = \"ct\".\"type_id\" INNER JOIN \"measurements\" \"m\" ON \"c\".\"condition_id\" = \"m\".\"condition_id\" WHERE \"m\".\"value\" IS NOT NULL GROUP BY \"c\".\"condition_name\", \"ct\".\"type_name\" HAVING VARIANCE(\"m\".\"value\") > 5 AND COUNT(\"m\".\"measurement_id\") > 2"
+},
+{
+"db": "sensor_device_specifications_and_measurement_parameters",
+"dialect": "Oracle",
+"difficulty": "Extra",
+"query_id": 2,
+"sql": "SELECT UNIQUE \"d\".\"device_id\", \"d\".\"model_number\", VARIANCE(\"m\".\"value\") AS \"measurement_variance\", REGR_AVGY(\"m\".\"value\", \"p\".\"typical_value\") AS \"regr_avg_y\", TRUNC(REGR_SLOPE(\"m\".\"value\", \"p\".\"typical_value\"), 4) AS \"regr_slope\" FROM \"devices\" \"d\" INNER JOIN \"measurements\" \"m\" ON \"d\".\"device_id\" = \"m\".\"device_id\" INNER JOIN \"parameters\" \"p\" ON \"m\".\"parameter_id\" = \"p\".\"parameter_id\" WHERE LENGTH(\"d\".\"model_number\") > 5 GROUP BY \"d\".\"device_id\", \"d\".\"model_number\" HAVING VARIANCE(\"m\".\"value\") > 1 AND REGR_AVGY(\"m\".\"value\", \"p\".\"typical_value\") IS NOT NULL ORDER BY \"measurement_variance\" DESC"
+},
+{
+"db": "simulated_time_series_data_analysis",
+"dialect": "PostgreSQL",
+"difficulty": "Easy",
+"query_id": 3,
+"sql": "SELECT name, TO_CHAR(created_at, 'YYYY-MM-DD') AS formatted_date FROM simulations WHERE status = 'completed'"
+},
+{
+"db": "simulated_time_series_data_analysis",
+"dialect": "PostgreSQL",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT TO_CHAR(sim.created_at, 'YYYY-MM') AS month, sim.name, COUNT(tsd.time_series_id) AS data_points FROM simulations sim INNER JOIN time_series_data tsd ON sim.simulation_id = tsd.simulation_id WHERE sim.status = 'completed' GROUP BY month, sim.name ORDER BY month, data_points DESC"
+},
+{
+"db": "social_media_interaction_tracking",
+"dialect": "MySQL",
+"difficulty": "Hard",
+"query_id": 3,
+"sql": "SELECT u.user_id, RPAD(u.username, 20, '.') AS padded_username, DATE_FORMAT(u.join_date, '%W, %M %d, %Y') AS formatted_join_date, (SELECT COUNT(*) FROM content c WHERE c.user_id = u.user_id AND c.post_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)) AS recent_posts_count FROM users u WHERE u.account_status = 'active' ORDER BY recent_posts_count DESC"
+},
+{
+"db": "social_media_interaction_tracking",
+"dialect": "MySQL",
+"difficulty": "Extra",
+"query_id": 2,
+"sql": "WITH user_activity AS (SELECT c.user_id, COUNT(DISTINCT c.content_id) AS content_count, COUNT(DISTINCT cl.user_id) AS unique_likers, BIT_OR(cl.user_id) AS liker_bitmask, MOD(COUNT(DISTINCT cl.user_id), 10) AS liker_mod, GREATEST(COUNT(DISTINCT c.content_id), COUNT(DISTINCT cl.user_id), NULL) AS max_metric FROM content c LEFT JOIN content_likes cl ON c.content_id = cl.content_id GROUP BY c.user_id), user_stats AS (SELECT ua.user_id, u.username, ua.content_count, ua.unique_likers, ua.liker_mod, ua.max_metric, VAR_POP(ua.content_count) OVER () AS overall_content_var, VAR_POP(ua.unique_likers) OVER () AS overall_liker_var FROM user_activity ua INNER JOIN users u ON ua.user_id = u.user_id) SELECT us.username, us.content_count, us.unique_likers, us.liker_mod, us.overall_content_var, us.overall_liker_var, IF(us.max_metric IS NULL, 'null_max', 'non_null_max') AS max_status FROM user_stats us ORDER BY us.content_count DESC"
+},
+{
+"db": "software_dependency_analysis_and_management",
+"dialect": "Oracle",
+"difficulty": "Easy",
+"query_id": 1,
+"sql": "SELECT \"package_name\", \"heaviness_score\", TO_CHAR(\"last_updated\", 'YYYY-MM-DD') AS \"formatted_date\" FROM \"packages\" WHERE \"heaviness_score\" > 4.0"
+},
+{
+"db": "software_dependency_analysis_and_management",
+"dialect": "Oracle",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT DISTINCT p.\"package_name\", NVL(p.\"heaviness_score\", 0) AS score FROM \"packages\" p INNER JOIN \"dependencies\" d ON p.\"package_id\" = d.\"child_package_id\" WHERE p.\"last_updated\" > TO_DATE('2023-01-01', 'YYYY-MM-DD') ORDER BY p.\"package_name\""
+},
+{
+"db": "software_release_and_issue_tracking",
+"dialect": "MySQL",
+"difficulty": "Hard",
+"query_id": 2,
+"sql": "SELECT r.release_id, r.release_name, DATE_ADD(r.release_date, INTERVAL '10:30' MINUTE_SECOND) AS adjusted_release_date FROM releases r WHERE r.release_id = 1"
+},
+{
+"db": "software_release_and_issue_tracking",
+"dialect": "MySQL",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH release_analysis AS (  SELECT r.product_id,          r.release_id,          r.release_date,          r.deadline,          DATE_ADD(r.deadline, INTERVAL '30:00' MINUTE_SECOND) AS extended_deadline,          NULL AS parsed_version,          r.release_name AS geostd8_name,          COUNT(DISTINCT ih.issue_id, ih.changed_by) AS unique_issue_changers   FROM releases r   LEFT JOIN issue_history ih ON r.release_id = ih.issue_id   WHERE r.release_date >= DATE_ADD('2023-04-01', INTERVAL 1 MONTH)   GROUP BY r.product_id, r.release_id, r.release_date, r.deadline, r.description), ranked_releases AS (  SELECT ra.*,         RANK() OVER (PARTITION BY ra.product_id ORDER BY ra.extended_deadline DESC) AS deadline_rank,         LEAD(ra.extended_deadline) OVER (PARTITION BY ra.product_id ORDER BY ra.release_date) AS next_extended_deadline   FROM release_analysis ra) SELECT rr.product_id,        rr.release_id,        rr.release_date,        rr.extended_deadline,        rr.unique_issue_changers,        rr.deadline_rank,        CASE WHEN rr.next_extended_deadline IS NOT NULL              THEN TIMESTAMPDIFF(MINUTE, rr.extended_deadline, rr.next_extended_deadline)         ELSE 0 END AS gap_minutes FROM ranked_releases rr WHERE rr.deadline_rank <= 2 ORDER BY rr.product_id, rr.deadline_rank"
+},
+{
+"db": "software_testing_and_quality_assurance_management",
+"dialect": "Oracle",
+"difficulty": "Easy",
+"query_id": 1,
+"sql": "SELECT \"user_id\", \"user_name\", \"email\", NVL(\"phone_number\", 'N/A') AS \"phone_number\" FROM \"users\" WHERE \"status\" = 'active' ORDER BY \"created_date\""
+},
+{
+"db": "software_testing_and_quality_assurance_management",
+"dialect": "Oracle",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT TO_CHAR(tc.\"created_date\", 'YYYY-MM') AS \"creation_month\", m.\"module_name\", COUNT(tc.\"test_case_id\") AS \"case_count\" FROM \"test_cases\" tc INNER JOIN \"modules\" m ON tc.\"module_id\" = m.\"module_id\" GROUP BY TO_CHAR(tc.\"created_date\", 'YYYY-MM'), m.\"module_name\" ORDER BY \"creation_month\", \"case_count\" DESC"
+},
+{
+"db": "sports_performance_tracking_and_analysis_196315",
+"dialect": "MySQL",
+"difficulty": "Hard",
+"query_id": 1,
+"sql": "SELECT sub.team_name, sub.player_name, sub.birth_date, sub.total_yards FROM (SELECT t.team_name, CONCAT(p.first_name, ' ', p.last_name) AS player_name, DATE_FORMAT(p.dob, '%Y-%m-%d') AS birth_date, ss.total_yards, ROW_NUMBER() OVER (PARTITION BY t.team_id ORDER BY ss.total_yards DESC) AS rn FROM players p INNER JOIN teams t ON p.team_id = t.team_id INNER JOIN season_stats ss ON p.player_id = ss.player_id AND ss.year = 2023) sub WHERE sub.rn <= 3 ORDER BY sub.team_name, sub.rn"
+},
+{
+"db": "sports_performance_tracking_and_analysis_196315",
+"dialect": "MySQL",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH player_efficiency AS (  SELECT p.player_id, p.first_name, p.last_name, p.salary,          p.weight, p.height,          LOG(p.salary) AS log_salary,          TRUNCATE(p.salary / IFNULL(rs.average, 1), 2) AS salary_per_yard,          GREATEST(p.salary, (           SELECT AVG(p2.salary) FROM players p2 WHERE p2.team_id = p.team_id         ), NULL) AS effective_salary   FROM players p   LEFT JOIN (    SELECT player_id, AVG(average) AS average    FROM rushing_stats    GROUP BY player_id   ) rs ON p.player_id = rs.player_id), ranked AS (  SELECT pe.*, t.team_name,          ROW_NUMBER() OVER (PARTITION BY t.team_id ORDER BY pe.log_salary DESC) AS rn   FROM player_efficiency pe   INNER JOIN teams t ON t.team_id = (SELECT team_id FROM players WHERE player_id = pe.player_id LIMIT 1)) SELECT team_name, COUNT(*) AS player_count,        TRUNCATE(AVG(log_salary), 4) AS avg_log_salary,        TRUNCATE(AVG(salary_per_yard), 2) AS avg_salary_per_yard,        SUM(IF(effective_salary IS NULL, 1, 0)) AS null_salary_count FROM ranked WHERE rn <= 3 GROUP BY team_name ORDER BY avg_log_salary DESC"
+},
+{
+"db": "statistics_and_category_analysis",
+"dialect": "Oracle",
+"difficulty": "Easy",
+"query_id": 4,
+"sql": "SELECT \"username\", TO_CHAR(\"created_at\", 'HH') AS \"creation_hour\" FROM \"users\" WHERE \"is_active\" = 1"
+},
+{
+"db": "statistics_and_category_analysis",
+"dialect": "Oracle",
+"difficulty": "Medium",
+"query_id": 2,
+"sql": "SELECT \"r\".\"region_name\", \"tp\".\"period_name\", (SYSDATE - \"tp\".\"start_date\") AS days_since_start FROM \"time_periods\" \"tp\" INNER JOIN \"category_statistics\" \"cs\" ON \"tp\".\"time_period_id\" = \"cs\".\"time_period_id\" INNER JOIN \"regions\" \"r\" ON \"cs\".\"region_id\" = \"r\".\"region_id\" WHERE \"tp\".\"start_date\" >= TO_DATE('2023-01-01', 'YYYY-MM-DD') AND \"cs\".\"sample_size\" > 500 GROUP BY \"r\".\"region_name\", \"tp\".\"period_name\", \"tp\".\"start_date\" ORDER BY days_since_start DESC"
+},
+{
+"db": "stock_market_data_analysis_and_tracking",
+"dialect": "Oracle",
+"difficulty": "Hard",
+"query_id": 3,
+"sql": "SELECT \"s\".\"sector_name\", COUNT(DISTINCT \"st\".\"stock_id\") AS \"num_stocks\", AVG(\"f\".\"revenue\") AS \"avg_revenue\", MIN(CASE WHEN \"f\".\"net_income\" > 0 THEN 1 ELSE 0 END) AS \"all_profitable\" FROM \"sectors\" \"s\" INNER JOIN \"stocks\" \"st\" ON \"s\".\"sector_id\" = \"st\".\"sector_id\" INNER JOIN \"financials\" \"f\" ON \"st\".\"stock_id\" = \"f\".\"stock_id\" WHERE EXTRACT(YEAR FROM TO_DATE(\"f\".\"fiscal_year\" || '-01-01', 'YYYY-MM-DD')) = 2023 GROUP BY \"s\".\"sector_name\" HAVING MIN(CASE WHEN \"f\".\"net_income\" > 0 THEN 1 ELSE 0 END) = 1 ORDER BY \"avg_revenue\" DESC"
+},
+{
+"db": "stock_market_data_analysis_and_tracking",
+"dialect": "Oracle",
+"difficulty": "Extra",
+"query_id": 2,
+"sql": "WITH date_range (price_date) AS ( SELECT TO_DATE('2024-01-01', 'YYYY-MM-DD') AS price_date FROM dual UNION ALL SELECT dr.price_date + 1 FROM date_range dr WHERE dr.price_date < TO_DATE('2024-03-31', 'YYYY-MM-DD') ), monthly_aggregates AS ( SELECT sp.\"stock_id\", TO_CHAR(TO_DATE(sp.\"price_date\", 'YYYY-MM-DD'), 'YYYY-MM') AS trade_month, AVG(sp.\"close\") AS avg_close, SUM(sp.\"volume\") AS total_volume, LISTAGG(TO_CHAR(sp.\"close\", '999.99'), ', ') WITHIN GROUP (ORDER BY TO_DATE(sp.\"price_date\", 'YYYY-MM-DD')) AS close_prices FROM \"stock_prices\" sp GROUP BY sp.\"stock_id\", TO_CHAR(TO_DATE(sp.\"price_date\", 'YYYY-MM-DD'), 'YYYY-MM') ), ranked_stocks AS ( SELECT ma.\"stock_id\", ma.trade_month, ma.avg_close, ma.total_volume, ma.close_prices, GREATEST(ma.avg_close, (SELECT AVG(sp2.\"close\") FROM \"stock_prices\" sp2 WHERE TO_CHAR(TO_DATE(sp2.\"price_date\", 'YYYY-MM-DD'), 'YYYY-MM') = ma.trade_month)) AS effective_avg, RANK() OVER (PARTITION BY ma.trade_month ORDER BY ma.total_volume DESC) AS volume_rank FROM monthly_aggregates ma ) SELECT rs.trade_month, rs.\"stock_id\", rs.avg_close, rs.total_volume, rs.close_prices, rs.effective_avg, rs.volume_rank FROM ranked_stocks rs WHERE rs.volume_rank <= 5 ORDER BY rs.trade_month, rs.volume_rank"
+},
+{
+"db": "suicide_statistics_and_demographic_analysis",
+"dialect": "PostgreSQL",
+"difficulty": "Easy",
+"query_id": 2,
+"sql": "SELECT file_path || ' (' || file_size || ' MB)' AS file_info FROM data_files WHERE file_type ILIKE 'csv' AND is_active = true"
+},
+{
+"db": "suicide_statistics_and_demographic_analysis",
+"dialect": "PostgreSQL",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT c.country_name, STRING_AGG(sd.method, ', ' ORDER BY sd.method) AS methods_used FROM countries c INNER JOIN suicide_data sd ON c.country_id = sd.country_id INNER JOIN sex s ON sd.sex = s.sex_id WHERE s.sex_name = 'male' AND sd.suicides_no > 0 GROUP BY c.country_name"
+},
+{
+"db": "traffic_incident_and_crime_data_management",
+"dialect": "MySQL",
+"difficulty": "Hard",
+"query_id": 4,
+"sql": "SELECT incident_id, crime_code_description, date_occurred FROM incidents WHERE officer_id = 1 AND incident_status = 'active' ORDER BY date_occurred DESC LIMIT 10"
+},
+{
+"db": "traffic_incident_and_crime_data_management",
+"dialect": "MySQL",
+"difficulty": "Extra",
+"query_id": 2,
+"sql": "WITH area_crime_stats AS (\n  SELECT a.area_id, a.area_name, DATE(i.date_occurred) AS truncated_date,\n    CASE WHEN JSON_VALID(i.mo_codes) THEN JSON_UNQUOTE(JSON_EXTRACT(i.mo_codes, '$.codes[0]')) ELSE NULL END AS first_mo_code,\n    REGEXP_SUBSTR(i.crime_code_description, '[A-Z]+') AS code_alpha_part\n  FROM incidents i\n  INNER JOIN areas a ON i.area_id = a.area_id\n  WHERE i.victim_age > 0\n)\nSELECT acs.area_name, acs.truncated_date, acs.first_mo_code, acs.code_alpha_part, 'Active' AS status_flag\nFROM area_crime_stats acs\nWHERE EXISTS (\n  SELECT 1 FROM incidents i2\n  WHERE i2.area_id = acs.area_id\n  AND i2.crime_code IN (SELECT crime_code FROM crime_codes WHERE severity = 'felony')\n)\nAND NOT EXISTS (\n  SELECT 1 FROM incidents i3\n  INNER JOIN areas a2 ON i3.area_id = a2.area_id\n  WHERE i3.area_id = acs.area_id\n  AND i3.incident_status = 'closed'\n  AND DATE(i3.date_occurred) = acs.truncated_date\n  AND CASE WHEN JSON_VALID(i3.mo_codes) THEN JSON_UNQUOTE(JSON_EXTRACT(i3.mo_codes, '$.codes[0]')) ELSE NULL END = acs.first_mo_code\n  AND REGEXP_SUBSTR(i3.crime_code_description, '[A-Z]+') = acs.code_alpha_part\n)"
+},
+{
+"db": "traffic_incident_and_weather_data_management",
+"dialect": "MySQL",
+"difficulty": "Easy",
+"query_id": 3,
+"sql": "SELECT incident_id, description, IF(end_time IS NOT NULL, 'Resolved', 'Ongoing') AS status_label FROM incidents WHERE severity > 1"
+},
+{
+"db": "traffic_incident_and_weather_data_management",
+"dialect": "MySQL",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT i.incident_id, i.severity, l.city, IFNULL(i.end_time, 'ongoing') AS end_status, i.priority_code FROM incidents i INNER JOIN locations l ON i.location_id = l.location_id WHERE i.severity >= 3 ORDER BY i.severity DESC"
+},
+{
+"db": "university_rankings_and_performance_metrics_337949",
+"dialect": "Oracle",
+"difficulty": "Hard",
+"query_id": 2,
+"sql": "SELECT u.\"university_id\", u.\"university_name\", u.\"location_code\", TO_CHAR(TO_DATE('2024-01-01', 'YYYY-MM-DD'), 'yyyy') AS \"rank_year\", ar.\"ar_score\", er.\"er_score\", ROW_NUMBER() OVER (PARTITION BY u.\"location_code\" ORDER BY (NVL(ar.\"ar_score\", 0) + NVL(er.\"er_score\", 0)) DESC) AS \"composite_rank\" FROM \"universities\" u INNER JOIN \"rankings\" r ON u.\"university_id\" = r.\"university_id\" INNER JOIN \"academic_reputation\" ar ON r.\"ranking_id\" = ar.\"ranking_id\" INNER JOIN \"employer_reputation\" er ON r.\"ranking_id\" = er.\"ranking_id\" WHERE r.\"year\" = 2024 AND r.\"score_scaled\" > 90"
+},
+{
+"db": "university_rankings_and_performance_metrics_337949",
+"dialect": "Oracle",
+"difficulty": "Extra",
+"query_id": 5,
+"sql": "WITH university_metrics AS ( SELECT \"u\".\"university_id\", \"u\".\"university_name\", \"u\".\"country\", \"u\".\"university_type\", \"u\".\"established_year\", \"r\".\"ranking_id\", \"r\".\"score_scaled\", \"r\".\"rank\", \"r\".\"year\", \"ar\".\"ar_score\", \"er\".\"er_score\", \"fsr\".\"fsr_score\", \"cpf\".\"cpf_score\", \"ifr\".\"ifr_score\", \"isr\".\"isr_score\", \"irn\".\"irn_score\", \"ger\".\"ger_score\", (NVL(\"ar\".\"ar_score\", 0) + NVL(\"er\".\"er_score\", 0) + NVL(\"fsr\".\"fsr_score\", 0) + NVL(\"cpf\".\"cpf_score\", 0) + NVL(\"ifr\".\"ifr_score\", 0) + NVL(\"isr\".\"isr_score\", 0) + NVL(\"irn\".\"irn_score\", 0) + NVL(\"ger\".\"ger_score\", 0)) AS \"total_score\", GREATEST(\"ar\".\"ar_score\", \"er\".\"er_score\", \"fsr\".\"fsr_score\", \"cpf\".\"cpf_score\", \"ifr\".\"ifr_score\", \"isr\".\"isr_score\", \"irn\".\"irn_score\", \"ger\".\"ger_score\", NULL) AS \"max_metric_score\" FROM \"universities\" \"u\" INNER JOIN \"rankings\" \"r\" ON \"u\".\"university_id\" = \"r\".\"university_id\" LEFT JOIN \"academic_reputation\" \"ar\" ON \"r\".\"ranking_id\" = \"ar\".\"ranking_id\" LEFT JOIN \"employer_reputation\" \"er\" ON \"r\".\"ranking_id\" = \"er\".\"ranking_id\" LEFT JOIN \"faculty_student_ratio\" \"fsr\" ON \"r\".\"ranking_id\" = \"fsr\".\"ranking_id\" LEFT JOIN \"citations_per_faculty\" \"cpf\" ON \"r\".\"ranking_id\" = \"cpf\".\"ranking_id\" LEFT JOIN \"international_faculty_ratio\" \"ifr\" ON \"r\".\"ranking_id\" = \"ifr\".\"ranking_id\" LEFT JOIN \"international_student_ratio\" \"isr\" ON \"r\".\"ranking_id\" = \"isr\".\"ranking_id\" LEFT JOIN \"international_research_network\" \"irn\" ON \"r\".\"ranking_id\" = \"irn\".\"ranking_id\" LEFT JOIN \"gender_enrollment_ratio\" \"ger\" ON \"r\".\"ranking_id\" = \"ger\".\"ranking_id\" WHERE \"r\".\"year\" = 2024 ), type_summary AS ( SELECT \"university_type\", \"country\", COUNT(DISTINCT \"university_id\") AS \"university_count\", ROUND(AVG(\"total_score\"), 2) AS \"avg_total_score\", MAX(\"total_score\") AS \"max_total_score\", MIN(\"total_score\") AS \"min_total_score\", ROUND(AVG(\"max_metric_score\"), 2) AS \"avg_max_metric\", 0 AS \"binary_univ_count_ones\", RANK() OVER (PARTITION BY \"university_type\" ORDER BY AVG(\"total_score\") DESC) AS \"type_rank\" FROM university_metrics GROUP BY \"university_type\", \"country\" ) SELECT \"university_type\", \"country\", \"university_count\", \"avg_total_score\", \"max_total_score\", \"min_total_score\", \"avg_max_metric\", \"binary_univ_count_ones\", \"type_rank\", (\"avg_total_score\" / GREATEST(\"avg_max_metric\", 1)) AS \"efficiency_ratio\" FROM type_summary WHERE \"type_rank\" <= 3 ORDER BY \"university_type\", \"type_rank\""
+},
+{
+"db": "university_study_abroad_program_management_and_timeline",
+"dialect": "Oracle",
+"difficulty": "Easy",
+"query_id": 1,
+"sql": "SELECT * FROM (SELECT c.*, u1.\"name\" AS sender_name, u2.\"name\" AS receiver_name FROM \"communications\" c LEFT JOIN \"users\" u1 ON c.\"sender_id\" = u1.\"user_id\" LEFT JOIN \"users\" u2 ON c.\"receiver_id\" = u2.\"user_id\" ORDER BY c.\"sent_at\" DESC) WHERE ROWNUM <= 10"
+},
+{
+"db": "university_study_abroad_program_management_and_timeline",
+"dialect": "Oracle",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT TO_CHAR(p.\"start_date\", 'YYYY-MM') AS \"month\", NVL2(p.\"approval_due_date\", 'Has Deadline', 'No Deadline') AS \"deadline_status\", COUNT(p.\"program_id\") AS \"program_count\" FROM \"programs\" p GROUP BY TO_CHAR(p.\"start_date\", 'YYYY-MM'), NVL2(p.\"approval_due_date\", 'Has Deadline', 'No Deadline') ORDER BY \"month\", \"deadline_status\""
+},
+{
+"db": "video_game_character_stats_and_mechanics",
+"dialect": "Oracle",
+"difficulty": "Hard",
+"query_id": 1,
+"sql": "SELECT \"p\".\"player_id\", \"p\".\"username\", TRUNC(\"p\".\"last_login_date\", 'MM') AS \"login_month\" FROM \"players\" \"p\" WHERE LENGTH(\"p\".\"username\") - LENGTH(REPLACE(\"p\".\"username\", 'a', '')) <= 2 AND \"p\".\"username\" LIKE '%a%'"
+},
+{
+"db": "video_game_character_stats_and_mechanics",
+"dialect": "Oracle",
+"difficulty": "Extra",
+"query_id": 3,
+"sql": "SELECT * FROM (  SELECT \"p\".\"status\", \"at\".\"type_name\", \"dm\".\"damage_dealt\", \"p\".\"player_id\",         REGEXP_COUNT(TO_CHAR(\"p\".\"player_id\", 'XXXXXXXX'), '1') AS \"bit_count_id\"   FROM \"damage_metrics\" \"dm\"   INNER JOIN \"players\" \"p\" ON \"dm\".\"player_id\" = \"p\".\"player_id\"   INNER JOIN \"attack_types\" \"at\" ON \"dm\".\"attack_type_id\" = \"at\".\"type_id\"   WHERE \"p\".\"status\" = 'active') PIVOT (  AVG(\"damage_dealt\") AS \"avg_damage\",  SUM(\"bit_count_id\") AS \"total_bit_count\"  FOR \"type_name\" IN ('Melee Strike' AS \"melee\", 'Fireball' AS \"fireball\", 'Heal' AS \"heal\")) ORDER BY \"status\""
+},
+{
+"db": "visual_novel_and_game_release_information",
+"dialect": "MySQL",
+"difficulty": "Easy",
+"query_id": 1,
+"sql": "SELECT COUNT(*) AS game_count, GROUP_CONCAT(g.title ORDER BY g.title SEPARATOR ', ') AS game_titles FROM games g WHERE g.platform_id = 1"
+},
+{
+"db": "visual_novel_and_game_release_information",
+"dialect": "MySQL",
+"difficulty": "Medium",
+"query_id": 1,
+"sql": "SELECT g.genre_id, GROUP_CONCAT(DISTINCT p.platform_name ORDER BY p.platform_name SEPARATOR ', ') AS platforms, COUNT(gp.game_platform_id) AS platform_count FROM games g INNER JOIN game_platforms gp ON g.game_id = gp.game_id INNER JOIN platforms p ON gp.platform_id = p.platform_id WHERE g.popularity > 85 GROUP BY g.genre_id HAVING platform_count >= 2 ORDER BY platform_count DESC"
+},
+{
+"db": "voter_demographics_and_election_preferences",
+"dialect": "Oracle",
+"difficulty": "Hard",
+"query_id": 1,
+"sql": "SELECT \"ag\".\"age_range\", \"voter_details\".\"voter_id\", \"voter_details\".\"reg_month_diff\" FROM (SELECT \"v\".\"voter_id\", \"v\".\"age_group_id\", \"v\".\"voter_registration_date\", ROW_NUMBER() OVER (PARTITION BY \"v\".\"age_group_id\" ORDER BY \"v\".\"voter_registration_date\") AS \"rn\", ROUND(MONTHS_BETWEEN(SYSDATE, \"v\".\"voter_registration_date\")) AS \"reg_month_diff\" FROM \"voters\" \"v\" WHERE \"v\".\"is_active\" = 1) \"voter_details\" INNER JOIN \"age_groups\" \"ag\" ON \"voter_details\".\"age_group_id\" = \"ag\".\"age_group_id\" WHERE \"voter_details\".\"rn\" <= 5 ORDER BY TO_CHAR(\"ag\".\"age_range\"), \"voter_details\".\"reg_month_diff\" DESC"
+},
+{
+"db": "voter_demographics_and_election_preferences",
+"dialect": "Oracle",
+"difficulty": "Easy",
+"query_id": 2,
+"sql": "SELECT \"response_id\", \"voter_id\", \"response_date\", \"response_status\" FROM (SELECT \"response_id\", \"voter_id\", \"response_date\", \"response_status\" FROM \"survey_responses\" ORDER BY \"response_date\" DESC) WHERE ROWNUM <= 5"
+},
+{
+"db": "weather_data_collection_and_analysis_23219",
+"dialect": "MySQL",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH station_efficiency AS (\n  SELECT ws.station_id, ws.station_name,\n         LOG(ws.elevation) AS log_elevation,\n         GREATEST(ws.elevation, (\n           SELECT AVG(ws2.elevation) FROM weather_stations ws2 WHERE ws2.active_status = 1\n         ), NULL) AS effective_elevation,\n         DATE_FORMAT(ws.installation_date, '%W, %M %d, %Y') AS formatted_install\n  FROM weather_stations ws\n  WHERE ws.active_status = 1\n),\nranked_stations AS (\n  SELECT se.*,\n         RANK() OVER (PARTITION BY DATE_FORMAT(se.formatted_install, '%Y-%m') ORDER BY se.log_elevation DESC) AS elev_rank,\n         se.effective_elevation DIV 2 AS half_effective_elev,\n         se.log_elevation DIV 10 AS log_category\n  FROM station_efficiency se\n)\nSELECT DATE_FORMAT(ranked_stations.formatted_install, '%Y-%m') AS install_month,\n       COUNT(*) AS station_count,\n       AVG(ranked_stations.log_elevation) AS avg_log_elevation,\n       SUM(IF(ranked_stations.effective_elevation IS NULL, 1, 0)) AS null_elev_count,\n       AVG(ranked_stations.half_effective_elev) AS avg_half_elev\nFROM ranked_stations\nWHERE ranked_stations.elev_rank <= 3\nGROUP BY install_month\nORDER BY install_month DESC"
+},
+{
+"db": "weather_data_collection_and_analysis_23219",
+"dialect": "MySQL",
+"difficulty": "Medium",
+"query_id": 3,
+"sql": "SELECT ws.station_name, COUNT(du.upload_id) AS total_uploads, IF(SUM(du.file_size) > 5, 'High Volume', 'Normal') AS upload_volume_category, GROUP_CONCAT(du.upload_method ORDER BY du.upload_method SEPARATOR ', ') AS methods_used FROM weather_stations ws INNER JOIN data_uploads du ON ws.station_id = du.station_id WHERE du.upload_status = 'successful' GROUP BY ws.station_id, ws.station_name ORDER BY total_uploads DESC"
+},
+{
+"db": "web_hosting_and_domain_management",
+"dialect": "PostgreSQL",
+"difficulty": "Hard",
+"query_id": 1,
+"sql": "SELECT ranked.type_name, ranked.plan_name, ranked.high_rating_count, ranked.cpu_rank FROM (SELECT pt.type_name, p.plan_name, COUNT(pr.review_id) FILTER (WHERE pr.rating >= 4) AS high_rating_count, ROW_NUMBER() OVER (PARTITION BY pt.type_name ORDER BY (p.metadata->'limits'->>'cpu')::TEXT DESC NULLS LAST) AS cpu_rank FROM plans p INNER JOIN plan_types pt ON p.type_id = pt.type_id LEFT JOIN plan_reviews pr ON p.plan_id = pr.plan_id GROUP BY pt.type_name, p.plan_name, p.metadata) ranked WHERE ranked.cpu_rank <= 3"
+},
+{
+"db": "web_hosting_and_domain_management",
+"dialect": "PostgreSQL",
+"difficulty": "Extra",
+"query_id": 1,
+"sql": "WITH plan_data AS (  SELECT p.plan_id, p.plan_name, p.cost, p.type_id, p.metadata,          TO_CHAR((p.metadata->>'created_at')::DATE, 'YYYY-MM-DD') AS metadata_date,          REGEXP_REPLACE(p.plan_name, '[^a-zA-Z0-9]', '') AS clean_name   FROM plans p   WHERE p.metadata IS NOT NULL), ranked_plans AS (  SELECT pd.plan_id, pd.plan_name, pd.cost, pd.type_id,          pd.metadata_date, pd.clean_name,          ROW_NUMBER() OVER (            PARTITION BY pd.type_id             ORDER BY pd.cost DESC, pd.clean_name           ) AS rn   FROM plan_data pd) SELECT rp.plan_id, rp.plan_name, rp.cost,        pt.type_name,        rp.metadata_date,        rp.clean_name,        rp.rn,        COUNT(*) FILTER (WHERE rp.rn <= 3) OVER (PARTITION BY rp.type_id) AS top3_count FROM ranked_plans rp INNER JOIN plan_types pt ON rp.type_id = pt.type_id WHERE rp.rn <= 5 ORDER BY rp.type_id, rp.rn"
+}
+]

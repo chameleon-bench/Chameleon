@@ -25,6 +25,8 @@
                 <li><a href="#features" class="nav-link">Features</a></li>
                 <li><a href="#statistics" class="nav-link">Statistics</a></li>
                 <li><a href="#leaderboard" class="nav-link">Leaderboard</a></li>
+                <li><a href="#preview" class="nav-link">Preview</a></li>
+                <li><a href="docs.html" class="nav-link">Documentation</a></li>
                 <li><a href="#download" class="nav-link">Download</a></li>
             </ul>
             <a href="https://github.com/chameleon-bench/Chameleon-Source" target="_blank" rel="noopener" class="nav-github" aria-label="View on GitHub">
@@ -294,6 +296,54 @@
         </div>
     </section>
 
+    <!-- Data Preview Section -->
+    <section class="section" id="preview">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">Data Preview</span>
+                <h2 class="section-title">Sample Queries</h2>
+                <p class="section-desc">
+                    Browse sampled queries from the dev split, covering the four difficulty levels
+                    and all three source dialects, without downloading the full archive.
+                </p>
+            </div>
+
+            <div class="preview-controls">
+                <select id="previewDifficulty" class="preview-select" aria-label="Filter by difficulty">
+                    <option value="">All difficulties</option>
+                    <option value="Easy">Easy</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Hard">Hard</option>
+                    <option value="Extra">Extra</option>
+                </select>
+                <select id="previewDialect" class="preview-select" aria-label="Filter by dialect">
+                    <option value="">All dialects</option>
+                    <option value="MySQL">MySQL</option>
+                    <option value="PostgreSQL">PostgreSQL</option>
+                    <option value="Oracle">Oracle</option>
+                </select>
+                <span id="previewCount" class="preview-count"></span>
+            </div>
+
+            <div class="preview-table-wrap">
+                <table class="preview-table">
+                    <thead>
+                        <tr>
+                            <th>Difficulty</th>
+                            <th>Dialect</th>
+                            <th>Query</th>
+                        </tr>
+                    </thead>
+                    <tbody id="previewBody"></tbody>
+                </table>
+            </div>
+
+            <div class="preview-more-wrap">
+                <button id="previewMore" class="preview-more" type="button">Load more</button>
+            </div>
+        </div>
+    </section>
+
     <!-- Download Section -->
     <section class="section" id="download">
         <div class="container">
@@ -317,8 +367,8 @@
                 <div class="download-card">
                     <div class="download-icon">📖</div>
                     <h3>Documentation</h3>
-                    <p>Detailed documentation on benchmark construction, divergence inventory, evaluation protocol, and how to submit results to the leaderboard.</p>
-                    <a href="#" class="btn btn-outline" onclick="alert('Documentation will be available upon paper acceptance.'); return false;">Read Docs</a>
+                    <p>Dataset structure, file formats, difficulty definitions, database setup, and the evaluation protocol needed to reproduce the reported ES and EM scores.</p>
+                    <a href="docs.html" class="btn btn-outline">Read Docs</a>
                 </div>
             </div>
         </div>
@@ -349,5 +399,6 @@
     </footer>
 
     <script src="js/main.js"></script>
+    <script src="js/preview.js"></script>
 </body>
 </html>
